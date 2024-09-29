@@ -1,0 +1,24 @@
+
+screenshot_delay: 0.3
+
+wow_directory: "C:/Program Files (x86)/World of Warcraft/"  # 请替换为实际路径
+
+shortcuts:
+  pause: 'esc'
+  continue: 'F7'
+
+delay:
+  min: 0.069
+  max: 0.160
+
+region:
+  x1: 2
+  y1: 80
+  x2: 65
+  y2: 145
+
+pixel:
+  x1: 1
+  y1: 1
+  x2: 15
+  y2: 15
