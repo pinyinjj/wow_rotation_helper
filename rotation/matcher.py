@@ -41,17 +41,17 @@ class ImageMatcher:
             return True, self.cast_time_skills[key]
         return False, 0
 
-    def pause(self, manual=False):
-        if self.running:
-            print("Paused. Press F7 to resume.")
+    def pause(self):
+        if self.running:  # 确保只在运行时暂停
+            print("Paused")
             self.running = False
-            self.manual_pause = manual  # 标记是否为手动暂停
+            self.manual_pause = True  # 仅在手动触发时设置
 
-    def resume(self, manual=False):
-        if not self.running:
-            print("Resuming...")
+    def resume(self):
+        if not self.running:  # 确保只在暂停时恢复
+            print("Resumed")
             self.running = True
-            self.manual_pause = not manual  # 解除手动暂停标志
+            self.manual_pause = False
 
     def resize_template(self, template, target_size):
 
@@ -185,10 +185,6 @@ class ImageMatcher:
         else:
             print(f"未检测到颜色变化为 {target_color}，超时退出。")
 
-
-
-
-
     def match_images(self):
         print("Starting image matching...")
 
@@ -201,12 +197,12 @@ class ImageMatcher:
 
             # 仅当非手动暂停时，检查颜色状态
             color_result = self.color_checker.check_colors()
+            print(f"Color result: {color_result}")  # 增加颜色结果的打印
+
             if color_result == 'red' and not self.manual_pause:
                 self.pause()
             elif color_result == 'white' and not self.manual_pause:
                 self.resume()
-            elif color_result == 'fixed' and not self.manual_pause:
-                self.pause()
             else:
                 self.running = False
                 self.pause()
