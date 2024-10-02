@@ -5,15 +5,20 @@ import numpy as np
 
 class SkillIconLoader:
     def __init__(self, class_name, talent_name, binded_abilities):
-        # 项目根目录，从 main.py 位置计算
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 确保返回到项目根目录
+        # 计算项目根目录，确保返回到项目根目录
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-        # 构建 base 和 talent 的路径
-        self.base_directory = os.path.join(project_root, 'gui', 'uis', 'icons', 'talent_icons', class_name)
+        # 构建基础和天赋的路径
+        self.base_directory = os.path.join(
+            project_root, 'gui', 'uis', 'icons', 'talent_icons', class_name
+        )
         self.class_directory = 'base'
-        self.talent_directory = talent_name.lower()  # 使用小写天赋名称
-        self.binded_abilities = binded_abilities  # 绑定的技能
-        print(f"Loading icons from: {self.base_directory} for abilities: {self.binded_abilities}")
+        self.talent_directory = talent_name.lower()  # 使用小写的天赋名称
+        self.binded_abilities = binded_abilities  # 用户绑定的技能
+
+        print(
+            f"Loading icons from: {self.base_directory} for abilities: {self.binded_abilities}"
+        )
         self.images = self._load_images()
 
     def _load_images(self):
@@ -46,15 +51,20 @@ class SkillIconLoader:
 
         for filename in os.listdir(directory):
             ability_name = os.path.splitext(filename)[0]  # 去掉文件扩展名
-            if ability_name in self.binded_abilities and any(filename.lower().endswith(ext) for ext in supported_extensions):
+
+            # 检查文件是否在绑定的技能列表中，且扩展名受支持
+            if ability_name in self.binded_abilities and any(
+                filename.lower().endswith(ext) for ext in supported_extensions
+            ):
                 image_path = os.path.join(directory, filename)
                 try:
-                    pil_image = Image.open(image_path)
-                    pil_image = pil_image.convert('RGB')  # 确保图片是 RGB 格式
+                    # 打开图像并转换为 RGB 格式
+                    pil_image = Image.open(image_path).convert('RGB')
                     image = np.array(pil_image)
+                    # 将颜色空间从 RGB 转换为 BGR，适用于 OpenCV
                     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                    images[ability_name] = gray_image
+
+                    images[ability_name] = image
                 except Exception as e:
                     print(f"Failed to load image: {filename}, error: {e}")
         return images
