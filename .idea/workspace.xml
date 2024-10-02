@@ -5,24 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c1cecdf3-f405-4485-a538-67f7b9f15b34" name="更改" comment="add some logic">
-      <change afterPath="$PROJECT_DIR$/gui/config/DeathKnight_blood_20241002.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/Blood.tga" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/Frost.tga" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/Unholy.tga" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241002130322.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241002130351.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241002130605.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241002134016.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/daji.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/xuepao.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/rotation/key_presser.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241002224609.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gui/config/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/gui/config/config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rotation/icon_loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/rotation/icon_loader.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rotation/matcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/rotation/matcher.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rotation/pixel_checker.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/rotation/rotation_config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/rotation/rotation_config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rotation/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/rotation/run.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -62,24 +47,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_ADD_EXTERNAL_FILES": "true",
-    "Python.class_page.executor": "Run",
-    "Python.db.executor": "Run",
-    "Python.icon_loader.executor": "Run",
-    "Python.main.executor": "Run",
-    "Python.run.executor": "Run",
-    "Python.test_capture_coords.executor": "Run",
-    "Python.user_key_binding.executor": "Run",
-    "Python.启动.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/Users/pinyi/PycharmProjects/wow_rotation_helper/gui/uis/icons/talent_icons/DeathKnight/blood",
-    "settings.editor.selected.configurable": "vcs.Subversion.Network"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
+    &quot;Python.class_page.executor&quot;: &quot;Run&quot;,
+    &quot;Python.db.executor&quot;: &quot;Run&quot;,
+    &quot;Python.icon_loader.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.run.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_capture_coords.executor&quot;: &quot;Run&quot;,
+    &quot;Python.user_key_binding.executor&quot;: &quot;Run&quot;,
+    &quot;Python.启动.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/pinyi/PycharmProjects/wow_rotation_helper/gui/uis/icons/talent_icons/DeathKnight/blood&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Subversion.Network&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\pinyi\PycharmProjects\wow_rotation_helper\gui\uis\icons\talent_icons\DeathKnight\blood" />
