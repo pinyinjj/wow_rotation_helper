@@ -5,7 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c1cecdf3-f405-4485-a538-67f7b9f15b34" name="更改" comment="add some logic">
-      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241002224609.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241003190613.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241003202423.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241004104908.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241004105008.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241004122022.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241004204618.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gui/config/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/gui/config/config.json" afterDir="false" />
     </list>
