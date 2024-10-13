@@ -5,8 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c1cecdf3-f405-4485-a538-67f7b9f15b34" name="更改" comment="add some logic">
-      <change afterPath="$PROJECT_DIR$/gui/images/svg_icons/save.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013223651.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013230253.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gui/config/DemonHunter_vengeance_20241013.json" beforeDir="false" afterPath="$PROJECT_DIR$/gui/config/DemonHunter_vengeance_20241013.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gui/uis/pages/class_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/uis/pages/class_page.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

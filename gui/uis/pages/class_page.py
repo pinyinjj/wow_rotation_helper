@@ -94,10 +94,26 @@ class Ui_ClassPage(object):
 
     def save_config_with_rules(self):
         """点击加载时，保存所有技能的快捷键到配置文件"""
-        # 清空旧数据
-        self.config_data = {}
+        # 生成文件名
+        class_name = self.selected_class_name if self.selected_class else "unknown_class"
+        talent_name = self.selected_talent_name if self.selected_talent else "unknown_talent"
+        timestamp = time.strftime("%Y%m%d")
+        config_filename = f"{class_name}_{talent_name}_{timestamp}.json"
+        config_filepath = os.path.join(self.config_folder, config_filename)
 
-        # 遍历所有的技能输入框，获取用户的输入并保存
+        # 加载现有的配置文件内容（如果存在）
+        if os.path.exists(config_filepath):
+            try:
+                with open(config_filepath, 'r', encoding='utf-8') as file:
+                    existing_config = json.load(file)
+                    print(f"现有配置文件已加载: {config_filepath}")
+            except json.JSONDecodeError as e:
+                print(f"加载现有配置文件时发生错误: {e}")
+                existing_config = {}
+        else:
+            existing_config = {}
+
+        # 遍历所有的技能输入框，获取用户的输入并更新 existing_config
         for i in range(self.base_ability_layout.count()):
             ability_widget = self.base_ability_layout.itemAt(i).widget()
             layout = ability_widget.layout()
@@ -110,7 +126,8 @@ class Ui_ClassPage(object):
                 # 从按钮的 toolTip 中获取技能名称
                 ability_name = button.toolTip()
                 if ability_name and shortcut:
-                    self.config_data[ability_name] = shortcut.upper()  # 绑定快捷键
+                    # 更新或新增配置
+                    existing_config[ability_name] = shortcut.upper()
 
         # 同样遍历天赋技能布局
         for i in range(self.talent_ability_layout.count()):
@@ -125,20 +142,17 @@ class Ui_ClassPage(object):
                 # 从按钮的 toolTip 中获取技能名称
                 ability_name = button.toolTip()
                 if ability_name and shortcut:
-                    self.config_data[ability_name] = shortcut.upper()
+                    existing_config[ability_name] = shortcut.upper()
 
         # 打印收集到的配置数据
-        print(f"收集到的配置数据: {self.config_data}")
+        print(f"更新后的配置数据: {existing_config}")
 
-        # 生成文件名并保存
-        class_name = self.selected_class_name if self.selected_class else "unknown_class"
-        talent_name = self.selected_talent_name if self.selected_talent else "unknown_talent"
-        timestamp = time.strftime("%Y%m%d")
-        config_filename = f"{class_name}_{talent_name}_{timestamp}.json"
-        config_filepath = os.path.join(self.config_folder, config_filename)
+        # 保存更新后的配置文件
+        with open(config_filepath, 'w', encoding='utf-8') as file:
+            json.dump(existing_config, file, indent=4, ensure_ascii=False)
+            print(f"配置已成功写入到 {config_filepath}")
 
-        # 调用保存配置文件的方法
-        self.save_config_to_file(config_filepath)
+        print(f"根据规则保存配置到 {config_filename}")
 
     def load_latest_config(self):
         """加载配置文件夹中匹配职业和天赋的最新配置文件"""
@@ -169,6 +183,7 @@ class Ui_ClassPage(object):
                 latest_filepath = os.path.join(self.config_folder, latest_file)
                 self.load_config_from_file(latest_filepath)
                 print(f"加载最新配置文件：{latest_file}")
+                return latest_filepath  # 返回最新配置文件路径
             else:
                 print("没有有效的配置文件")
         else:
@@ -221,12 +236,19 @@ class Ui_ClassPage(object):
             self.start_button.setIcon(QIcon(Functions.set_svg_icon("pause.svg")))
             self.is_running = True
 
+            # 加载最新的配置文件
+            config_filepath = self.load_latest_config()  # 获取最新的配置文件路径
+
+            if not config_filepath:
+                print("未找到配置文件，无法启动旋转线程")
+                return
+
             # 如果线程不存在，则创建并启动
             if not self.rotation_thread:
                 print("Creating and starting new RotationThread.")
                 self.rotation_thread = RotationThread(
-                    config_file='rotation_config.yaml',
-                    keybind_file='config.json',
+                    config_file='rotation_config.yaml',  # 旋转配置文件
+                    keybind_file=config_filepath,  # 使用最新配置文件路径作为键绑定文件
                     class_name=self.selected_class_name,
                     talent_name=self.selected_talent_name
                 )
@@ -251,16 +273,6 @@ class Ui_ClassPage(object):
         # 当线程完成时处理任何清理工作
         self.rotation_thread = None
         self.is_running = False
-
-    def create_separator(self, orientation="horizontal"):
-        separator = QFrame()
-        if orientation == "horizontal":
-            separator.setFrameShape(QFrame.HLine)  # 水平线
-            separator.setFrameShadow(QFrame.Sunken)  # 凹陷效果
-        else:
-            separator.setFrameShape(QFrame.VLine)  # 垂直线
-            separator.setFrameShadow(QFrame.Sunken)  # 凹陷效果
-        return separator
 
     def create_button(self, icon="icon_heart.svg", size=40):
         button = QPushButton()
@@ -660,17 +672,6 @@ class Ui_ClassPage(object):
             if col == columns:
                 col = 0
                 row += 1
-
-    def toggle_input_mode(self, button, py_line_edit):
-        """在按钮和输入框之间切换"""
-        if button.isVisible():
-            button.setVisible(False)
-            py_line_edit.setVisible(True)  # 显示输入框以允许编辑
-            py_line_edit.setFocus()  # 聚焦输入框
-        else:
-            py_line_edit.setVisible(False)
-            button.setVisible(True)  # 显示按钮
-
 
     def retranslateUi(self, page_class):
         page_class.setWindowTitle(QCoreApplication.translate("ClassPage", "Class Page", None))
