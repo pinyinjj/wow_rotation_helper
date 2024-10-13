@@ -3,12 +3,14 @@
 # IMPORT QT CORE
 # ///////////////////////////////////////////////////////////////
 from qt_core import *
+from PySide6.QtCore import Qt
 # IMPORT SKILL PAGE
 from .class_page import Ui_ClassPage
 
 class Ui_MainPages(object):
     def __init__(self, main_window):
         self.main_window = main_window
+        self.main_window.setFocusPolicy(Qt.ClickFocus)
     def setupUi(self, MainPages):
         if not MainPages.objectName():
             MainPages.setObjectName(u"MainPages")
@@ -155,6 +157,8 @@ class Ui_MainPages(object):
         self.ui_class_page.setupUi(self.page_class)
 
         self.pages.addWidget(self.page_class)
+
+        self.pages.setFocusPolicy(Qt.ClickFocus)
 
         self.main_pages_layout.addWidget(self.pages)
 
