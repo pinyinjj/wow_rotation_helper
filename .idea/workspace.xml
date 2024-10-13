@@ -5,7 +5,28 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c1cecdf3-f405-4485-a538-67f7b9f15b34" name="更改" comment="add some logic">
-      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241005161659.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/config/DeathKnight_blood_20241010.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/config/DemonHunter_vengeance_20241013.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241007184834.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241008202459.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DeathKnight/blood/20241010221019.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/desktop.ini" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/havoc.tga" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance.tga" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013092829.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093307.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093324.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093346.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093403.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093546.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093618.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093644.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093710.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093735.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093803.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093836.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093901.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gui/uis/icons/talent_icons/DemonHunter/vengeance/20241013093941.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gui/config/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/gui/config/config.json" afterDir="false" />
     </list>
