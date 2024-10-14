@@ -97,8 +97,8 @@ class Ui_ClassPage(object):
         # 生成文件名
         class_name = self.selected_class_name if self.selected_class else "unknown_class"
         talent_name = self.selected_talent_name if self.selected_talent else "unknown_talent"
-        timestamp = time.strftime("%Y%m%d")
-        config_filename = f"{class_name}_{talent_name}_{timestamp}.json"
+
+        config_filename = f"{class_name}_{talent_name}.json"
         config_filepath = os.path.join(self.config_folder, config_filename)
 
         # 加载现有的配置文件内容（如果存在）
@@ -155,39 +155,25 @@ class Ui_ClassPage(object):
         print(f"根据规则保存配置到 {config_filename}")
 
     def load_latest_config(self):
-        """加载配置文件夹中匹配职业和天赋的最新配置文件"""
+        """加载配置文件夹中匹配职业和天赋的配置文件"""
         if not self.selected_class_name or not self.selected_talent_name:
             print("请先选择职业和天赋")
             return
 
         # 构建匹配文件名的前缀
-        prefix = f"{self.selected_class_name}_{self.selected_talent_name}_"
+        prefix = f"{self.selected_class_name}_{self.selected_talent_name}"
 
         # 获取所有匹配前缀的配置文件
         config_files = [f for f in os.listdir(self.config_folder) if f.startswith(prefix) and f.endswith('.json')]
 
         # 检查是否有匹配的配置文件
         if config_files:
-            # 按文件名中的时间戳排序，获取最新的文件
-            def extract_timestamp(filename):
-                # 提取文件名中的时间戳部分
-                try:
-                    return time.strptime(filename.split('_')[-1].split('.')[0], "%Y%m%d")
-                except ValueError:
-                    return None
-
-            # 筛选出包含有效时间戳的文件并按时间戳排序
-            valid_files = [(f, extract_timestamp(f)) for f in config_files if extract_timestamp(f) is not None]
-            if valid_files:
-                latest_file = max(valid_files, key=lambda x: x[1])[0]
-                latest_filepath = os.path.join(self.config_folder, latest_file)
-                self.load_config_from_file(latest_filepath)
-                print(f"加载最新配置文件：{latest_file}")
-                return latest_filepath  # 返回最新配置文件路径
-            else:
-                print("没有有效的配置文件")
+            latest_filepath = os.path.join(self.config_folder, config_files[0])  # 加载第一个匹配的文件
+            self.load_config_from_file(latest_filepath)
+            print(f"加载配置文件：{config_files[0]}")
+            return latest_filepath  # 返回加载的配置文件路径
         else:
-            print("未找到匹配的配置文件")
+            print("没有有效的配置文件")
 
     def load_config_from_file(self, filepath):
         """从配置文件中加载绑定并将输入框转换为按钮"""
@@ -199,7 +185,7 @@ class Ui_ClassPage(object):
 
                 # 遍历配置并将按键绑定显示为按钮
                 for ability_name, shortcut in config_data.items():
-                    print(f"尝试应用绑定：{ability_name} -> {shortcut}")
+                    # print(f"尝试应用绑定：{ability_name} -> {shortcut}")
                     self.apply_binding_to_ui(ability_name, shortcut)  # 在此处应用绑定
         except FileNotFoundError:
             print(f"配置文件 {filepath} 未找到")
@@ -623,7 +609,7 @@ class Ui_ClassPage(object):
             icon_label.setScaledContents(True)
 
             ability_name = os.path.splitext(os.path.basename(icon_path))[0]
-            print(f"加载技能图标: {ability_name}")
+            # print(f"加载技能图标: {ability_name}")
 
             try:
                 icon_label.setPixmap(QIcon(icon_path).pixmap(32, 32))
@@ -648,7 +634,7 @@ class Ui_ClassPage(object):
                 button.setText(shortcut.upper())  # 显示为大写
                 py_line_edit.setVisible(False)
                 button.setVisible(True)
-                print(f"已应用按键绑定: {ability_name} -> {shortcut.upper()}")
+                # print(f"已应用按键绑定: {ability_name} -> {shortcut.upper()}")
 
             py_line_edit.setObjectName(f"line_edit_{i}")  # 设置唯一对象名称
             py_line_edit.setFixedHeight(40)
