@@ -28,6 +28,7 @@ QPushButton {{
     color: {_color};
 	border-radius: {_radius};	
 	background-color: {_bg_color};
+	{font_size_style}
 }}
 QPushButton:hover {{
 	background-color: {_bg_color_hover};
@@ -48,6 +49,7 @@ class PyPushButton(QPushButton):
         bg_color,
         bg_color_hover,
         bg_color_pressed,
+        font_size = None,
         parent = None,
     ):
         super().__init__()
@@ -58,13 +60,16 @@ class PyPushButton(QPushButton):
             self.setParent(parent)
         self.setCursor(Qt.PointingHandCursor)
 
+        font_size_style = f"font-size: {font_size}px;" if font_size is not None else ""
+
         # SET STYLESHEET
         custom_style = style.format(
             _color = color,
             _radius = radius,
             _bg_color = bg_color,
             _bg_color_hover = bg_color_hover,
-            _bg_color_pressed = bg_color_pressed
+            _bg_color_pressed = bg_color_pressed,
+            font_size_style=font_size_style
         )
         self.setStyleSheet(custom_style)
 
