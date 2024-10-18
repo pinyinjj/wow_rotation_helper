@@ -2,7 +2,7 @@ import os
 from PySide6.QtGui import QIcon, Qt
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QPushButton, QGridLayout, QVBoxLayout, QLabel, QLineEdit, QHBoxLayout, QWidget, \
-    QMainWindow, QSizePolicy, QFrame, QSplitter, QTextEdit, QGroupBox
+    QMainWindow, QSizePolicy, QFrame, QSplitter, QTextEdit, QGroupBox, QDialog
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtCore import QTimer
 from rotation import RotationThread
@@ -11,6 +11,7 @@ from gui.widgets.py_line_edit import PyLineEdit
 from gui.widgets.py_groupbox import PyGroupbox
 from gui.core.json_themes import Themes
 from gui.widgets.py_push_button import PyPushButton
+from .key_binding import KeyBindDialog
 import json
 import time
 from PySide6.QtGui import QFont
@@ -97,11 +98,12 @@ class Ui_ClassPage(object):
         # 生成文件名
         class_name = self.selected_class_name if self.selected_class else "unknown_class"
         talent_name = self.selected_talent_name if self.selected_talent else "unknown_talent"
-        timestamp = time.strftime("%Y%m%d")
-        config_filename = f"{class_name}_{talent_name}_{timestamp}.json"
+
+        config_filename = f"{class_name}_{talent_name}.json"
         config_filepath = os.path.join(self.config_folder, config_filename)
 
         # 加载现有的配置文件内容（如果存在）
+        existing_config = {}
         if os.path.exists(config_filepath):
             try:
                 with open(config_filepath, 'r', encoding='utf-8') as file:
@@ -110,84 +112,57 @@ class Ui_ClassPage(object):
             except json.JSONDecodeError as e:
                 print(f"加载现有配置文件时发生错误: {e}")
                 existing_config = {}
-        else:
-            existing_config = {}
 
-        # 遍历所有的技能输入框，获取用户的输入并更新 existing_config
-        for i in range(self.base_ability_layout.count()):
-            ability_widget = self.base_ability_layout.itemAt(i).widget()
-            layout = ability_widget.layout()
-
-            if layout:
-                py_line_edit = layout.itemAt(1).widget()  # 获取输入框
-                button = layout.itemAt(2).widget()  # 获取按钮
-                shortcut = py_line_edit.text().strip()  # 获取输入的快捷键
-
-                # 从按钮的 toolTip 中获取技能名称
-                ability_name = button.toolTip()
-                if ability_name and shortcut:
-                    # 更新或新增配置
-                    existing_config[ability_name] = shortcut.upper()
-
-        # 同样遍历天赋技能布局
+        # 遍历天赋技能布局，获取按钮绑定的快捷键
         for i in range(self.talent_ability_layout.count()):
             ability_widget = self.talent_ability_layout.itemAt(i).widget()
             layout = ability_widget.layout()
 
             if layout:
-                py_line_edit = layout.itemAt(1).widget()
-                button = layout.itemAt(2).widget()
-                shortcut = py_line_edit.text().strip()
+                button = layout.itemAt(1).widget()  # 获取按钮
+                shortcut = button.text().strip()  # 从按钮文本中获取快捷键
 
                 # 从按钮的 toolTip 中获取技能名称
                 ability_name = button.toolTip()
                 if ability_name and shortcut:
                     existing_config[ability_name] = shortcut.upper()
 
-        # 打印收集到的配置数据
-        print(f"更新后的配置数据: {existing_config}")
-
-        # 保存更新后的配置文件
+        # 将更新后的配置保存到文件
         with open(config_filepath, 'w', encoding='utf-8') as file:
             json.dump(existing_config, file, indent=4, ensure_ascii=False)
             print(f"配置已成功写入到 {config_filepath}")
 
-        print(f"根据规则保存配置到 {config_filename}")
+        # 打印收集到的配置数据
+        print(f"更新后的配置数据: {existing_config}")
+
+        # 将更新后的配置保存到文件
+        with open(config_filepath, 'w', encoding='utf-8') as file:
+            json.dump(existing_config, file, indent=4, ensure_ascii=False)
+            print(f"配置已成功写入到 {config_filepath}")
+
+        # 打印收集到的配置数据
+        print(f"更新后的配置数据: {existing_config}")
 
     def load_latest_config(self):
-        """加载配置文件夹中匹配职业和天赋的最新配置文件"""
+        """加载配置文件夹中匹配职业和天赋的配置文件"""
         if not self.selected_class_name or not self.selected_talent_name:
             print("请先选择职业和天赋")
             return
 
         # 构建匹配文件名的前缀
-        prefix = f"{self.selected_class_name}_{self.selected_talent_name}_"
+        prefix = f"{self.selected_class_name}_{self.selected_talent_name}"
 
         # 获取所有匹配前缀的配置文件
         config_files = [f for f in os.listdir(self.config_folder) if f.startswith(prefix) and f.endswith('.json')]
 
         # 检查是否有匹配的配置文件
         if config_files:
-            # 按文件名中的时间戳排序，获取最新的文件
-            def extract_timestamp(filename):
-                # 提取文件名中的时间戳部分
-                try:
-                    return time.strptime(filename.split('_')[-1].split('.')[0], "%Y%m%d")
-                except ValueError:
-                    return None
-
-            # 筛选出包含有效时间戳的文件并按时间戳排序
-            valid_files = [(f, extract_timestamp(f)) for f in config_files if extract_timestamp(f) is not None]
-            if valid_files:
-                latest_file = max(valid_files, key=lambda x: x[1])[0]
-                latest_filepath = os.path.join(self.config_folder, latest_file)
-                self.load_config_from_file(latest_filepath)
-                print(f"加载最新配置文件：{latest_file}")
-                return latest_filepath  # 返回最新配置文件路径
-            else:
-                print("没有有效的配置文件")
+            latest_filepath = os.path.join(self.config_folder, config_files[0])  # 加载第一个匹配的文件
+            self.load_config_from_file(latest_filepath)
+            print(f"加载配置文件：{config_files[0]}")
+            return latest_filepath  # 返回加载的配置文件路径
         else:
-            print("未找到匹配的配置文件")
+            print("没有有效的配置文件")
 
     def load_config_from_file(self, filepath):
         """从配置文件中加载绑定并将输入框转换为按钮"""
@@ -199,7 +174,7 @@ class Ui_ClassPage(object):
 
                 # 遍历配置并将按键绑定显示为按钮
                 for ability_name, shortcut in config_data.items():
-                    print(f"尝试应用绑定：{ability_name} -> {shortcut}")
+                    # print(f"尝试应用绑定：{ability_name} -> {shortcut}")
                     self.apply_binding_to_ui(ability_name, shortcut)  # 在此处应用绑定
         except FileNotFoundError:
             print(f"配置文件 {filepath} 未找到")
@@ -227,7 +202,7 @@ class Ui_ClassPage(object):
                         py_line_edit.setVisible(False)
                         button.setVisible(True)
                         return
-        print(f"未找到 ability: {ability_name} 对应的输入框")
+        
 
     def toggle_start_pause(self):
         if not self.is_running:
@@ -311,86 +286,6 @@ class Ui_ClassPage(object):
 
         return button
 
-    def create_py_line_edit(self, ability_name):
-        py_line_edit = PyLineEdit(
-            text="",
-            place_holder_text="输入快捷键",
-            radius=8,
-            border_size=2,
-            color=self.themes["app_color"]["text_foreground"],
-            selection_color=self.themes["app_color"]["white"],
-            bg_color=self.themes["app_color"]["dark_one"],
-            bg_color_active=self.themes["app_color"]["dark_three"],
-            context_color=self.themes["app_color"]["context_color"]
-        )
-
-        # 创建与输入框切换的按钮
-        button = PyPushButton(
-            text="设置快捷键",
-            radius=8,
-            color=self.themes["app_color"]["text_foreground"],
-            bg_color=self.themes["app_color"]["bg_one"],
-            bg_color_hover=self.themes["app_color"]["text_active"],
-            bg_color_pressed=self.themes["app_color"]["context_pressed"]
-        )
-
-        # 设置按钮样式，包括字体大小、边框和背景颜色
-        button.setStyleSheet(f"""
-            QPushButton {{
-                font-size: 25px;
-                border-radius: 8px;
-                color: {self.themes["app_color"]["white"]};
-                background-color: {self.themes["app_color"]["bg_one"]};
-                border: 2px solid {self.themes["app_color"]["context_color"]};
-            }}
-            QPushButton:hover {{
-                background-color: {self.themes["app_color"]["context_hover"]};
-                border: 2px solid {self.themes["app_color"]["context_hover"]};
-            }}
-            QPushButton:pressed {{
-                background-color: {self.themes["app_color"]["context_pressed"]};
-                border: 2px solid {self.themes["app_color"]["context_pressed"]};
-            }}
-        """)
-
-        button.setFixedHeight(40)
-        button.setFixedWidth(40)  # 增加按钮的宽度
-        button.setVisible(False)  # 初始状态为隐藏，等快捷键输入后显示
-
-        # 确保设置按钮的工具提示为技能名称，便于后续获取
-        button.setToolTip(ability_name)
-
-        # 当快捷键编辑完成时，自动将文本转换为大写，并隐藏输入框显示按钮
-        def on_edit_finished():
-            shortcut = py_line_edit.text().strip()
-            if shortcut:  # 检查输入是否为空
-                button.setText(shortcut.upper())  # 转换为大写显示在按钮上
-                py_line_edit.setVisible(False)  # 隐藏输入框
-                button.setVisible(True)  # 显示按钮
-
-        py_line_edit.editingFinished.connect(on_edit_finished)
-
-        # 点击按钮时，切换回输入框进行编辑
-        def on_button_clicked():
-            button.setVisible(False)  # 隐藏按钮
-            py_line_edit.setVisible(True)  # 显示输入框
-            py_line_edit.setFocus()  # 让输入框获取焦点，方便用户继续输入
-
-        button.clicked.connect(on_button_clicked)
-
-        # 添加失去焦点事件，用于自动切换
-        def on_focus_out(event):
-            shortcut = py_line_edit.text().strip()
-            if shortcut:  # 如果输入不为空
-                on_edit_finished()  # 调用编辑完成函数
-            else:
-                py_line_edit.clear()  # 清空输入框内容
-            super(PyLineEdit, py_line_edit).focusOutEvent(event)
-
-        py_line_edit.focusOutEvent = on_focus_out
-
-        return py_line_edit, button
-
     def save_config_to_file(self, file_path):
         """保存当前所有绑定的技能和快捷键到文件，并打印写入流"""
         try:
@@ -468,7 +363,6 @@ class Ui_ClassPage(object):
         # 在选择天赋后加载最新的配置文件
         self.load_latest_config()
 
-        self.load_class_base_icons(class_name)
         self.load_ability_icons(class_name, talent_name)
 
         # 显示基础技能和天赋技能组
@@ -482,12 +376,6 @@ class Ui_ClassPage(object):
             widget = layout.itemAt(i).widget()
             if widget is not None:
                 widget.setParent(None)
-
-    def load_class_base_icons(self, class_name):
-        base_dir = os.path.join(gui_dir, "uis", "icons", "talent_icons", class_name, "base")
-        self.load_abilities(self.base_ability_layout, base_dir)
-        self.base_ability.setVisible(True)
-        self.adjust_main_window_size()
 
     def load_ability_icons(self, class_name, talent_name):
         talent_dir = os.path.join(gui_dir, "uis", "icons", "talent_icons", class_name, talent_name.lower())
@@ -608,6 +496,7 @@ class Ui_ClassPage(object):
             """
 
     def load_abilities(self, layout, directory, columns=8):
+        """加载技能并创建按钮绑定"""
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
 
@@ -623,7 +512,6 @@ class Ui_ClassPage(object):
             icon_label.setScaledContents(True)
 
             ability_name = os.path.splitext(os.path.basename(icon_path))[0]
-            print(f"加载技能图标: {ability_name}")
 
             try:
                 icon_label.setPixmap(QIcon(icon_path).pixmap(32, 32))
@@ -640,27 +528,22 @@ class Ui_ClassPage(object):
             icon_widget.setLayout(icon_layout)
             icon_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-            py_line_edit, button = self.create_py_line_edit(ability_name)
+            # 创建绑定按钮
+            button = self.create_binding_button(ability_name)
 
             # 如果配置文件中存在绑定，将其应用
             if ability_name in self.config_data:
                 shortcut = self.config_data[ability_name]
                 button.setText(shortcut.upper())  # 显示为大写
-                py_line_edit.setVisible(False)
-                button.setVisible(True)
-                print(f"已应用按键绑定: {ability_name} -> {shortcut.upper()}")
 
-            py_line_edit.setObjectName(f"line_edit_{i}")  # 设置唯一对象名称
-            py_line_edit.setFixedHeight(40)
-            py_line_edit.setFixedWidth(40)
-            py_line_edit.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            button.setFixedHeight(40)
+            button.setFixedWidth(100)  # 增加按钮的宽度
 
             ability_layout = QHBoxLayout()
             ability_layout.setAlignment(Qt.AlignLeft)
             ability_layout.setSpacing(5)
 
             ability_layout.addWidget(icon_widget)
-            ability_layout.addWidget(py_line_edit)  # 添加输入框
             ability_layout.addWidget(button)  # 添加按钮
 
             ability_widget = QWidget()
@@ -673,5 +556,34 @@ class Ui_ClassPage(object):
                 col = 0
                 row += 1
 
+    def create_binding_button(self, ability_name):
+        """创建用于按键绑定的按钮，并设置样式"""
+        button = PyPushButton(
+            text="",
+            radius=8,
+            color=self.themes["app_color"]["white"],
+            bg_color=self.themes["app_color"]["bg_one"],
+            bg_color_hover=self.themes["app_color"]["context_hover"],
+            bg_color_pressed=self.themes["app_color"]["context_pressed"],
+            font_size=30
+        )
+
+        button.setFixedHeight(40)
+        button.setFixedWidth(40)
+        button.setToolTip(ability_name)
+
+        def on_button_clicked():
+            """点击按钮后打开按键绑定对话框"""
+            dialog = KeyBindDialog(self.main_window)
+            if dialog.exec() == QDialog.Accepted:
+                # 获取绑定的按键并设置按钮文本
+                key_sequence = dialog.key_sequence
+                if key_sequence:
+                    button.setText(key_sequence.upper())
+                    self.config_data[ability_name] = key_sequence.upper()  # 更新配置
+
+        button.clicked.connect(on_button_clicked)
+
+        return button
     def retranslateUi(self, page_class):
         page_class.setWindowTitle(QCoreApplication.translate("ClassPage", "Class Page", None))
