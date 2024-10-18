@@ -1,20 +1,20 @@
-import os
-from PySide6.QtGui import QIcon, Qt
-from PySide6.QtCore import QSize
-from PySide6.QtWidgets import QPushButton, QGridLayout, QVBoxLayout, QLabel, QLineEdit, QHBoxLayout, QWidget, \
-    QMainWindow, QSizePolicy, QFrame, QSplitter, QTextEdit, QGroupBox, QDialog
-from PySide6.QtCore import QCoreApplication
-from PySide6.QtCore import QTimer
-from rotation import RotationThread
-from gui.core.functions import Functions
-from gui.widgets.py_line_edit import PyLineEdit
-from gui.widgets.py_groupbox import PyGroupbox
-from gui.core.json_themes import Themes
-from gui.widgets.py_push_button import PyPushButton
-from .key_binding import KeyBindDialog
 import json
-import time
-from PySide6.QtGui import QFont
+import os
+import sys
+
+from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QSize
+from PySide6.QtGui import QIcon, Qt
+from PySide6.QtWidgets import QPushButton, QGridLayout, QVBoxLayout, QLabel, QHBoxLayout, QWidget, \
+    QMainWindow, QSizePolicy, QDialog, QTextEdit
+
+from gui.core.functions import Functions
+from gui.core.json_themes import Themes
+from gui.widgets.py_groupbox import PyGroupbox
+from gui.widgets.py_push_button import PyPushButton
+from rotation import RotationThread
+from .key_binding import KeyBindDialog
+from ...widgets.py_logger_window.py_logger_window import PyLoggerWindow
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 gui_dir = os.path.join(current_dir, "..", "..")
@@ -54,13 +54,6 @@ class Ui_ClassPage(object):
         self.page_skills_layout.addWidget(self.talent_group)
         self.talent_group.setVisible(False)
 
-        # 创建 Base Ability Group
-        self.base_ability = PyGroupbox("Class Base Abilities", self.themes)
-        self.base_ability_layout = QGridLayout()
-        self.base_ability.setLayout(self.base_ability_layout)
-        self.page_skills_layout.addWidget(self.base_ability)
-        self.base_ability.setVisible(False)
-
         # 创建 Talent Ability Group
         self.talent_ability = PyGroupbox("Talent Abilities", self.themes)
         self.talent_ability_layout = QGridLayout()
@@ -72,7 +65,7 @@ class Ui_ClassPage(object):
         self.page_skills_layout.addLayout(self.button_layout)
 
         self.load_button = self.create_button("save.svg")
-        self.load_button.setText("保存按键")
+        self.load_button.setText("保存")
         self.load_button.clicked.connect(self.save_config_with_rules)
         self.button_layout.addWidget(self.load_button)
 
@@ -80,6 +73,8 @@ class Ui_ClassPage(object):
         self.start_button.setText("开始")
         self.start_button.clicked.connect(self.toggle_start_pause)
         self.button_layout.addWidget(self.start_button)
+
+
 
         class_icon_path = os.path.join(gui_dir, "uis", "icons", "class_icons")
         class_icons = [f for f in os.listdir(class_icon_path) if f.endswith(".tga")]
@@ -92,6 +87,26 @@ class Ui_ClassPage(object):
             self.class_layout.addWidget(button, i // 6, i % 6)
 
         self.adjust_class_icon_spacing()
+
+        self.log_text_edit = PyLoggerWindow(
+            bg_color="#2c2c2c",
+            color="#ffffff",
+            radius="8px",
+            padding="10px",
+            font_size=30,
+            bg_color_readonly="#1e1e1e"
+        )
+        self.page_skills_layout.addWidget(self.log_text_edit)  # 将日志框体添加到布局的最下方
+
+        # 重定向标准输出和错误输出到日志窗口
+        sys.stdout = self.log_text_edit
+        sys.stderr = self.log_text_edit
+
+    def closeEvent(self, event):
+        """Restore stdout and stderr on close."""
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        super().closeEvent(event)
 
     def save_config_with_rules(self):
         """点击加载时，保存所有技能的快捷键到配置文件"""
@@ -207,7 +222,7 @@ class Ui_ClassPage(object):
     def toggle_start_pause(self):
         if not self.is_running:
             print("Starting RotationThread...")
-            self.start_button.setText("暂停")
+            self.start_button.setText("停止")
             self.start_button.setIcon(QIcon(Functions.set_svg_icon("pause.svg")))
             self.is_running = True
 
@@ -326,10 +341,8 @@ class Ui_ClassPage(object):
         if self.selected_class and self.selected_class != button:
             self.selected_class.setStyleSheet(self.get_button_style(selected=False))
             self.clear_layout(self.talent_layout)
-            self.clear_layout(self.base_ability_layout)
             self.clear_layout(self.talent_ability_layout)
             self.talent_group.setVisible(False)
-            self.base_ability.setVisible(False)
             self.talent_ability.setVisible(False)
 
         self.selected_class = button
@@ -352,12 +365,10 @@ class Ui_ClassPage(object):
         self.selected_talent = button
         button.setStyleSheet(self.get_button_style(selected=True))
 
-        self.clear_layout(self.base_ability_layout)
         self.clear_layout(self.talent_ability_layout)
 
         self.selected_talent_name = button.property("name")
 
-        self.base_ability.setVisible(False)
         self.talent_ability.setVisible(False)
 
         # 在选择天赋后加载最新的配置文件
@@ -365,8 +376,6 @@ class Ui_ClassPage(object):
 
         self.load_ability_icons(class_name, talent_name)
 
-        # 显示基础技能和天赋技能组
-        self.base_ability.setVisible(True)
         self.talent_ability.setVisible(True)
         self.relayout_for_ability_display()
 
@@ -437,24 +446,22 @@ class Ui_ClassPage(object):
         # 计算窗口大小逻辑
         class_icon_rows = (self.class_layout.count() + 5) // 6
         talent_icon_rows = (self.talent_layout.count() + 3) // 4
-        base_ability_rows = (self.base_ability_layout.count() + 5) // 6
         talent_ability_rows = (self.talent_ability_layout.count() + 5) // 6
 
         icon_size = 48
         row_spacing = 10
 
         total_height = (
-                (class_icon_rows + base_ability_rows + talent_icon_rows + talent_ability_rows)
+                (class_icon_rows + talent_icon_rows + talent_ability_rows)
                 * (icon_size + row_spacing)
                 + 200  # 额外缓冲空间
         )
 
         total_width_class = self.class_layout.count() * (icon_size + row_spacing) // 6
         total_width_talent = self.talent_layout.count() * (icon_size + row_spacing) // 4
-        total_width_base = self.base_ability_layout.count() * (icon_size + row_spacing) // 6
         total_width_talent_ability = self.talent_ability_layout.count() * (icon_size + row_spacing) // 6
 
-        total_width = max(total_width_class, total_width_talent, total_width_base, total_width_talent_ability)
+        total_width = max(total_width_class, total_width_talent, total_width_talent_ability)
 
         max_width = 1200
         max_height = 800
@@ -587,3 +594,4 @@ class Ui_ClassPage(object):
         return button
     def retranslateUi(self, page_class):
         page_class.setWindowTitle(QCoreApplication.translate("ClassPage", "Class Page", None))
+
