@@ -5,3 +5,4 @@ pillow
 keyboard
 PyGetWindow
 PyAutoGUI
+python_version >= 3.9
