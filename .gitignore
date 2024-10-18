@@ -169,3 +169,5 @@ cython_debug/
 .idea/workspace.xml
 /.idea
 .idea/workspace.xml
+.idea/wow_rotation_helper.iml
+.idea/workspace.xml

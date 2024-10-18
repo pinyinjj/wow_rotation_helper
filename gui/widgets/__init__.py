@@ -69,3 +69,6 @@ from . py_line_edit import PyLineEdit
 # PY TABLE WIDGET
 # ///////////////////////////////////////////////////////////////
 from . py_table_widget import PyTableWidget
+
+from . py_logger_window import PyLoggerWindow
+from . py_groupbox import PyGroupbox

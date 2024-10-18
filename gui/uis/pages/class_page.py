@@ -10,11 +10,10 @@ from PySide6.QtWidgets import QPushButton, QGridLayout, QVBoxLayout, QLabel, QHB
 
 from gui.core.functions import Functions
 from gui.core.json_themes import Themes
-from gui.widgets.py_groupbox import PyGroupbox
-from gui.widgets.py_push_button import PyPushButton
+from gui.widgets import PyGroupbox, PyPushButton, PyLoggerWindow
 from rotation import RotationThread
 from .key_binding import KeyBindDialog
-from ...widgets.py_logger_window.py_logger_window import PyLoggerWindow
+
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 gui_dir = os.path.join(current_dir, "..", "..")
@@ -65,16 +64,14 @@ class Ui_ClassPage(object):
         self.page_skills_layout.addLayout(self.button_layout)
 
         self.load_button = self.create_button("save.svg")
-        self.load_button.setText("保存")
+        self.load_button.setText("Save")
         self.load_button.clicked.connect(self.save_config_with_rules)
         self.button_layout.addWidget(self.load_button)
 
         self.start_button = self.create_button("start.svg")
-        self.start_button.setText("开始")
+        self.start_button.setText("Start")
         self.start_button.clicked.connect(self.toggle_start_pause)
         self.button_layout.addWidget(self.start_button)
-
-
 
         class_icon_path = os.path.join(gui_dir, "uis", "icons", "class_icons")
         class_icons = [f for f in os.listdir(class_icon_path) if f.endswith(".tga")]
@@ -89,12 +86,13 @@ class Ui_ClassPage(object):
         self.adjust_class_icon_spacing()
 
         self.log_text_edit = PyLoggerWindow(
-            bg_color="#2c2c2c",
-            color="#ffffff",
+            bg_color=self.themes["app_color"]["bg_one"],
+            color=self.themes["app_color"]["text_foreground"],
             radius="8px",
             padding="10px",
             font_size=30,
-            bg_color_readonly="#1e1e1e"
+            bg_color_readonly=self.themes["app_color"]["dark_two"],
+            hover_color=self.themes["app_color"]["context_hover"]
         )
         self.page_skills_layout.addWidget(self.log_text_edit)  # 将日志框体添加到布局的最下方
 
@@ -592,6 +590,7 @@ class Ui_ClassPage(object):
         button.clicked.connect(on_button_clicked)
 
         return button
+
     def retranslateUi(self, page_class):
         page_class.setWindowTitle(QCoreApplication.translate("ClassPage", "Class Page", None))
 
