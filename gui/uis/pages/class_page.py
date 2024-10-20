@@ -138,15 +138,7 @@ class Ui_ClassPage(object):
                 # 从按钮的 toolTip 中获取技能名称
                 ability_name = button.toolTip()
                 if ability_name and shortcut:
-                    existing_config[ability_name] = shortcut.upper()
-
-        # 将更新后的配置保存到文件
-        with open(config_filepath, 'w', encoding='utf-8') as file:
-            json.dump(existing_config, file, indent=4, ensure_ascii=False)
-            print(f"配置已成功写入到 {config_filepath}")
-
-        # 打印收集到的配置数据
-        print(f"更新后的配置数据: {existing_config}")
+                    existing_config[ability_name] = shortcut.lower()  # 将快捷键转换为小写
 
         # 将更新后的配置保存到文件
         with open(config_filepath, 'w', encoding='utf-8') as file:
