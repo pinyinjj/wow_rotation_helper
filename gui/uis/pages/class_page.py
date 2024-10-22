@@ -179,38 +179,21 @@ class Ui_ClassPage(object):
         """从配置文件中加载绑定并将输入框转换为按钮"""
         try:
             with open(filepath, 'r', encoding='utf-8') as file:
-                config_data = json.load(file)
-                self.config_data = config_data
-                print(f"加载配置文件 {filepath} 成功: {config_data}")
+                self.config_data = json.load(file)
+                print(f"加载配置文件 {filepath} 成功: {self.config_data}")
 
-                # 遍历配置并将按键绑定显示为按钮
-                for ability_name, shortcut in config_data.items():
-                    # print(f"尝试应用绑定：{ability_name} -> {shortcut}")
-                    self.apply_binding_to_ui(ability_name, shortcut)  # 在此处应用绑定
+
         except FileNotFoundError:
             print(f"配置文件 {filepath} 未找到")
         except json.JSONDecodeError as e:
             print(f"解析配置文件错误: {e}")
 
-    def apply_binding_to_ui(self, ability_name, shortcut):
-        """根据已加载的按键绑定，将现有输入框转换为按钮"""
-        # 遍历布局找到对应的 ability_name
-        for i in range(self.talent_ability_layout.count()):
-            widget = self.talent_ability_layout.itemAt(i).widget()
-            if widget:
-                # 检查 widget 中的 QLabel 是否有相应的 ability_name
-                ability_layout = widget.layout()
-                if isinstance(ability_layout.itemAt(0).widget(), QLabel):
-                    label = ability_layout.itemAt(0).widget()
-                    if ability_name == label.toolTip():  # 检查图标的 toolTip 是否匹配 ability_name
-                        print(f"找到匹配的 ability: {ability_name}, 正在应用绑定...")
-                        button = ability_layout.itemAt(2).widget()
-
-                        # 设置按钮的文本为绑定的快捷键，并隐藏输入框
-                        button.setText(shortcut.upper())
-
-                        button.setVisible(True)
-                        return
+    def format_shortcut(self, shortcut):
+        """格式化按键绑定，F1-F10 全大写，其他按键首字母大写"""
+        if shortcut.startswith("F") and shortcut[1:].isdigit() and 1 <= int(shortcut[1:]) <= 10:
+            return shortcut.upper()  # F1-F10 全大写
+        else:
+            return shortcut.capitalize()  # 其他按键首字母大写
 
 
     def toggle_start_pause(self):
@@ -394,16 +377,16 @@ class Ui_ClassPage(object):
         self.adjust_main_window_size()
 
     def create_talent_button(self, icon_path, icon_size, talent_name, class_name):
-        button = QPushButton()
-        print(f"create_talent_button {talent_name}")
-        button.setProperty("name", talent_name)
+        talent_button = QPushButton()
+        # print(f"create_talent_button {talent_name}")
+        talent_button.setProperty("name", talent_name)
         icon = QIcon(icon_path)
-        button.setIcon(icon)
-        button.setIconSize(QSize(icon_size.width() - 10, icon_size.height() - 10))
-        button.setFixedSize(icon_size.width(), icon_size.height())
-        button.setStyleSheet(self.get_button_style(selected=False))
-        button.clicked.connect(lambda _: self.on_talent_button_clicked(button, talent_name, class_name))
-        return button
+        talent_button.setIcon(icon)
+        talent_button.setIconSize(QSize(icon_size.width() - 10, icon_size.height() - 10))
+        talent_button.setFixedSize(icon_size.width(), icon_size.height())
+        talent_button.setStyleSheet(self.get_button_style(selected=False))
+        talent_button.clicked.connect(lambda _: self.on_talent_button_clicked(talent_button, talent_name, class_name))
+        return talent_button
 
     def load_talent_icons(self, class_name):
         for i in reversed(range(self.talent_layout.count())):
@@ -442,7 +425,7 @@ class Ui_ClassPage(object):
         talent_icon_rows = (self.talent_layout.count() + 3) // 4
         talent_ability_rows = (self.talent_ability_layout.count() + 5) // 6
 
-        icon_size = 48
+        icon_size = 64
         row_spacing = 10
 
         total_height = (
@@ -535,10 +518,8 @@ class Ui_ClassPage(object):
             # 如果配置文件中存在绑定，将其应用
             if ability_name in self.config_data:
                 shortcut = self.config_data[ability_name]
-                button.setText(shortcut.upper())  # 显示为大写
-
-            button.setFixedHeight(40)
-            button.setFixedWidth(100)  # 增加按钮的宽度
+                formatted_shortcut = self.format_shortcut(shortcut)  # 使用新方法格式化
+                button.setText(formatted_shortcut)  # 显示格式化后的文本
 
             ability_layout = QHBoxLayout()
             ability_layout.setAlignment(Qt.AlignLeft)
@@ -570,7 +551,7 @@ class Ui_ClassPage(object):
         )
 
         button.setFixedHeight(40)
-        button.setFixedWidth(50)
+        button.setFixedWidth(100)
         button.setToolTip(ability_name)
 
         def on_button_clicked():
@@ -580,13 +561,14 @@ class Ui_ClassPage(object):
                 # 获取绑定的按键并设置按钮文本
                 key_sequence = dialog.key_sequence
                 if key_sequence:
-                    if key_sequence.startswith("F") and key_sequence[1:].isdigit() and 1 <= int(key_sequence[1:]) <= 10:
-                        formatted_key_sequence = key_sequence.upper()
-                    else:
-                        formatted_key_sequence = key_sequence.capitalize()
-
-                    button.setText(formatted_key_sequence)
-                    self.config_data[ability_name] = formatted_key_sequence
+                    # if key_sequence.startswith("F") and key_sequence[1:].isdigit() and 1 <= int(key_sequence[1:]) <= 10:
+                    #     formatted_key_sequence = key_sequence.upper()
+                    # else:
+                    #     formatted_key_sequence = key_sequence.capitalize()
+                    formatted_shortcut = self.format_shortcut(key_sequence)
+                    button.setText(formatted_shortcut)
+                    # button.setText(formatted_key_sequence)
+                    self.config_data[ability_name] = key_sequence
 
         button.clicked.connect(on_button_clicked)
 
