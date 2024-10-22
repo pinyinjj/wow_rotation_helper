@@ -81,7 +81,7 @@ class Ui_ClassPage(object):
         for i, icon_filename in enumerate(class_icons):
             class_name = os.path.splitext(icon_filename)[0]
             icon_path = os.path.join(class_icon_path, icon_filename)
-            button = self.create_class_button(icon_path, QSize(64, 64), class_name,
+            button = self.create_class_button(icon_path, QSize(100, 100), class_name,
                                               lambda _, class_name=class_name: self.load_talent_icons(class_name))
             self.class_layout.addWidget(button, i // 6, i % 6)
 
@@ -304,15 +304,15 @@ class Ui_ClassPage(object):
         self.class_layout.setHorizontalSpacing(spacing)
 
     def create_class_button(self, icon_path, icon_size, class_name, on_click_callback):
-        button = QPushButton()
-        button.setProperty("name", class_name)
+        class_button = QPushButton()
+        class_button.setProperty("name", class_name)
         icon = QIcon(icon_path)
-        button.setIcon(icon)
-        button.setIconSize(QSize(icon_size.width() - 10, icon_size.height() - 10))
-        button.setFixedSize(icon_size.width(), icon_size.height())
-        button.setStyleSheet(self.get_button_style(selected=False))
-        button.clicked.connect(lambda _: self.on_class_button_clicked(button, on_click_callback))
-        return button
+        class_button.setIcon(icon)
+        class_button.setIconSize(QSize(icon_size.width() - 10, icon_size.height() - 10))
+        class_button.setFixedSize(icon_size.width(), icon_size.height())
+        class_button.setStyleSheet(self.get_button_style(selected=False))
+        class_button.clicked.connect(lambda _: self.on_class_button_clicked(class_button, on_click_callback))
+        return class_button
 
     def on_class_button_clicked(self, button, on_click_callback):
         if self.selected_class and self.selected_class != button:
@@ -398,7 +398,7 @@ class Ui_ClassPage(object):
         for i, talent_icon in enumerate(talent_icons):
             icon_path = os.path.join(talent_icon_path, talent_icon)
             talent_name = os.path.splitext(talent_icon)[0].lower()
-            button = self.create_talent_button(icon_path, QSize(64, 64), talent_name, class_name)
+            button = self.create_talent_button(icon_path, QSize(128, 128), talent_name, class_name)
             self.talent_layout.addWidget(button, i // 4, i % 4)
 
     def load_abilities_from_directory(self, directory):
@@ -423,7 +423,7 @@ class Ui_ClassPage(object):
         # 计算窗口大小逻辑
         class_icon_rows = (self.class_layout.count() + 5) // 6
         talent_icon_rows = (self.talent_layout.count() + 3) // 4
-        talent_ability_rows = (self.talent_ability_layout.count() + 5) // 6
+        talent_ability_rows = (self.talent_ability_layout.count() + 5) // 4
 
         icon_size = 64
         row_spacing = 10
@@ -436,7 +436,7 @@ class Ui_ClassPage(object):
 
         total_width_class = self.class_layout.count() * (icon_size + row_spacing) // 6
         total_width_talent = self.talent_layout.count() * (icon_size + row_spacing) // 4
-        total_width_talent_ability = self.talent_ability_layout.count() * (icon_size + row_spacing) // 6
+        total_width_talent_ability = self.talent_ability_layout.count() * (icon_size + row_spacing) // 4
 
         total_width = max(total_width_class, total_width_talent, total_width_talent_ability)
 
@@ -479,7 +479,7 @@ class Ui_ClassPage(object):
             }
             """
 
-    def load_abilities(self, layout, directory, columns=8):
+    def load_abilities(self, layout, directory, columns=6):
         """加载技能并创建按钮绑定"""
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
@@ -492,13 +492,13 @@ class Ui_ClassPage(object):
         for i, icon_path in enumerate(abilities):
 
             icon_label = QLabel()
-            icon_label.setFixedSize(32, 32)
+            icon_label.setFixedSize(64, 64)
             icon_label.setScaledContents(True)
 
             ability_name = os.path.splitext(os.path.basename(icon_path))[0]
 
             try:
-                icon_label.setPixmap(QIcon(icon_path).pixmap(32, 32))
+                icon_label.setPixmap(QIcon(icon_path).pixmap(64, 64))
             except Exception as e:
                 print(f"加载图标错误: {ability_name}, 错误: {e}")
                 icon_label.setText("No Icon")
@@ -513,20 +513,20 @@ class Ui_ClassPage(object):
             icon_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
             # 创建绑定按钮
-            button = self.create_binding_button(ability_name)
+            binding_button = self.create_binding_button(ability_name)
 
             # 如果配置文件中存在绑定，将其应用
             if ability_name in self.config_data:
                 shortcut = self.config_data[ability_name]
                 formatted_shortcut = self.format_shortcut(shortcut)  # 使用新方法格式化
-                button.setText(formatted_shortcut)  # 显示格式化后的文本
+                binding_button.setText(formatted_shortcut)  # 显示格式化后的文本
 
             ability_layout = QHBoxLayout()
             ability_layout.setAlignment(Qt.AlignLeft)
             ability_layout.setSpacing(5)
 
             ability_layout.addWidget(icon_widget)
-            ability_layout.addWidget(button)  # 添加按钮
+            ability_layout.addWidget(binding_button)  # 添加按钮
 
             ability_widget = QWidget()
             ability_widget.setLayout(ability_layout)
@@ -547,27 +547,22 @@ class Ui_ClassPage(object):
             bg_color=self.themes["app_color"]["bg_one"],
             bg_color_hover=self.themes["app_color"]["context_hover"],
             bg_color_pressed=self.themes["app_color"]["context_pressed"],
-            font_size=22
+            font_size=30
         )
 
-        button.setFixedHeight(40)
-        button.setFixedWidth(100)
+        button.setFixedHeight(64)
+        button.setFixedWidth(120)
         button.setToolTip(ability_name)
 
         def on_button_clicked():
             """点击按钮后打开按键绑定对话框"""
             dialog = KeyBindDialog(self.main_window)
             if dialog.exec() == QDialog.Accepted:
-                # 获取绑定的按键并设置按钮文本
+
                 key_sequence = dialog.key_sequence
                 if key_sequence:
-                    # if key_sequence.startswith("F") and key_sequence[1:].isdigit() and 1 <= int(key_sequence[1:]) <= 10:
-                    #     formatted_key_sequence = key_sequence.upper()
-                    # else:
-                    #     formatted_key_sequence = key_sequence.capitalize()
                     formatted_shortcut = self.format_shortcut(key_sequence)
                     button.setText(formatted_shortcut)
-                    # button.setText(formatted_key_sequence)
                     self.config_data[ability_name] = key_sequence
 
         button.clicked.connect(on_button_clicked)
