@@ -31,5 +31,6 @@
         "family" : "Segoe UI",
         "title_size" : 10,
         "text_size" : 9
-    }
+    },
+    "debug": "False"
 }

@@ -1,8 +1,9 @@
-PySide6
+PySide6 == 6.8.0.1
 PyYAML
 numpy
 pillow
 keyboard
 PyGetWindow
 PyAutoGUI
-python_version >= 3.9
+opencv-python
+python == 3.9.20
