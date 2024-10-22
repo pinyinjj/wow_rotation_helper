@@ -6,7 +6,7 @@ from PySide6.QtCore import QCoreApplication
 from PySide6.QtCore import QSize
 from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWidgets import QPushButton, QGridLayout, QVBoxLayout, QLabel, QHBoxLayout, QWidget, \
-    QMainWindow, QSizePolicy, QDialog, QTextEdit
+    QMainWindow, QSizePolicy, QDialog
 
 from gui.core.functions import Functions
 from gui.core.json_themes import Themes
@@ -198,13 +198,11 @@ class Ui_ClassPage(object):
                     label = ability_layout.itemAt(0).widget()
                     if ability_name == label.toolTip():  # 检查图标的 toolTip 是否匹配 ability_name
                         print(f"找到匹配的 ability: {ability_name}, 正在应用绑定...")
-                        # 获取 PyLineEdit 和按钮
-                        py_line_edit = ability_layout.itemAt(1).widget()
                         button = ability_layout.itemAt(2).widget()
 
                         # 设置按钮的文本为绑定的快捷键，并隐藏输入框
                         button.setText(shortcut.upper())
-                        py_line_edit.setVisible(False)
+
                         button.setVisible(True)
                         return
         
