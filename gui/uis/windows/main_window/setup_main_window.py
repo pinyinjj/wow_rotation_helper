@@ -69,9 +69,17 @@ class SetupMainWindow:
         },
         {
             "btn_icon": "wow.svg",
-            "btn_id": "btn_classes", # 自己新增的页面
-            "btn_text": "天赋＆技能",
-            "btn_tooltip": "选择技能",
+            "btn_id": "btn_classes",
+            "btn_text": "Talents & Abilities",
+            "btn_tooltip": "Binding Page",
+            "show_top": True,
+            "is_active": False
+        },
+        {
+            "btn_icon": "capture.svg",
+            "btn_id": "btn_capture",
+            "btn_text": "Capture Area",
+            "btn_tooltip": "Capture Area",
             "show_top": True,
             "is_active": False
         },
