@@ -103,6 +103,13 @@ class MainWindow(QMainWindow):
             # Load Page 2
             MainFunctions.set_page(self, self.ui.load_pages.page_2)
 
+        if btn.objectName() == "btn_classes":
+            # Select Menu
+            self.ui.left_menu.select_only_one(btn.objectName())
+
+            MainFunctions.set_page(self, self.ui.load_pages.page_class)
+
+
         # 自己新增的页面
         if btn.objectName() == "btn_capture":
             # Select Menu
@@ -111,14 +118,6 @@ class MainWindow(QMainWindow):
             # Load Page Class
             MainFunctions.set_page(self, self.ui.load_pages.page_capture)
 
-            if btn.objectName() == "btn_macros":
-                # Select Menu
-                self.ui.left_menu.select_only_one(btn.objectName())
-
-                # Load Page Class
-                MainFunctions.set_page(self, self.ui.load_pages.page_macros)
-
-            # 自己新增的页面
         if btn.objectName() == "btn_macros":
             # Select Menu
             self.ui.left_menu.select_only_one(btn.objectName())

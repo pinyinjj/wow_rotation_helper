@@ -165,17 +165,17 @@ class Ui_MainPages(object):
         self.retranslateUi(MainPages)
 
         # Class Capture
-        self.page_capture = QWidget()
-        self.ui_capture_page = Ui_ClassPage(self.main_window)
-        self.ui_capture_page.setupUi(self.page_capture)
+        # self.page_capture = QWidget()
+        # self.ui_capture_page = Ui_ClassPage(self.main_window)
+        # self.ui_capture_page.setupUi(self.page_capture)
+        #
+        # self.pages.addWidget(self.page_capture)
 
-        self.pages.addWidget(self.page_capture)
+        # self.pages.setFocusPolicy(Qt.ClickFocus)
 
-        self.pages.setFocusPolicy(Qt.ClickFocus)
+        # self.main_pages_layout.addWidget(self.pages)
 
-        self.main_pages_layout.addWidget(self.pages)
-
-        self.retranslateUi(MainPages)
+        # self.retranslateUi(MainPages)
 
         self.pages.setCurrentIndex(0)
 

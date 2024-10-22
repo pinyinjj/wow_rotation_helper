@@ -154,26 +154,39 @@ class Ui_ClassPage(object):
         # 打印收集到的配置数据
         print(f"更新后的配置数据: {existing_config}")
 
+    import os
+
     def load_latest_config(self):
-        """加载配置文件夹中匹配职业和天赋的配置文件"""
         if not self.selected_class_name or not self.selected_talent_name:
-            print("请先选择职业和天赋")
             return
 
-        # 构建匹配文件名的前缀
         prefix = f"{self.selected_class_name}_{self.selected_talent_name}"
 
-        # 获取所有匹配前缀的配置文件
-        config_files = [f for f in os.listdir(self.config_folder) if f.startswith(prefix) and f.endswith('.json')]
+        if not os.path.exists(self.config_folder):
+            os.makedirs(self.config_folder)
 
-        # 检查是否有匹配的配置文件
+        try:
+            config_files = [f for f in os.listdir(self.config_folder) if f.startswith(prefix) and f.endswith('.json')]
+        except Exception:
+            return
+
         if config_files:
-            latest_filepath = os.path.join(self.config_folder, config_files[0])  # 加载第一个匹配的文件
+            latest_filepath = os.path.join(self.config_folder, config_files[0])
             self.load_config_from_file(latest_filepath)
-            print(f"加载配置文件：{config_files[0]}")
-            return latest_filepath  # 返回加载的配置文件路径
+            return latest_filepath
         else:
-            print("没有有效的配置文件")
+            empty_config = {}
+            default_config_filename = f"{prefix}.json"
+            default_config_filepath = os.path.join(self.config_folder, default_config_filename)
+
+            try:
+                with open(default_config_filepath, 'w') as config_file:
+                    json.dump(empty_config, config_file, indent=4)
+            except Exception:
+                return
+
+            self.load_config_from_file(default_config_filepath)
+            return default_config_filepath
 
     def load_config_from_file(self, filepath):
         """从配置文件中加载绑定并将输入框转换为按钮"""
@@ -335,25 +348,50 @@ class Ui_ClassPage(object):
         self.adjust_main_window_size()
 
     def on_talent_button_clicked(self, button, talent_name, class_name):
+        print(f"Button clicked: {button}, Talent: {talent_name}, Class: {class_name}")
+
         if self.selected_talent and self.selected_talent != button:
+            print("Deselecting previous talent button.")
             self.selected_talent.setStyleSheet(self.get_button_style(selected=False))
 
+        # 记录选中的按钮
         self.selected_talent = button
-        button.setStyleSheet(self.get_button_style(selected=True))
+        print(f"Selected talent button: {self.selected_talent}")
 
+        # 更新按钮样式
+        button.setStyleSheet(self.get_button_style(selected=True))
+        print("Button style updated.")
+
+        # 清空天赋能力布局
+        print("Clearing talent ability layout.")
         self.clear_layout(self.talent_ability_layout)
 
+        # 更新选中的天赋名称
         self.selected_talent_name = button.property("name")
+        print(f"Selected talent name: {self.selected_talent_name}")
 
+        # 隐藏天赋能力部分
         self.talent_ability.setVisible(False)
+        print("Talent ability hidden.")
 
         # 在选择天赋后加载最新的配置文件
-        self.load_latest_config()
+        print("Loading latest config...")
+        self.load_latest_config()  # 加载最新配置
+        print("Config loaded.")
 
+        # 加载能力图标
+        print(f"Loading ability icons for Class: {class_name}, Talent: {talent_name}")
         self.load_ability_icons(class_name, talent_name)
+        print("Ability icons loaded.")
 
+        # 显示天赋能力
         self.talent_ability.setVisible(True)
+        print("Talent ability visible.")
+
+        # 调整布局以显示能力
+        print("Relayout for ability display.")
         self.relayout_for_ability_display()
+        print("Relayout complete.")
 
     def clear_layout(self, layout):
         # 清理布局中的所有小部件
@@ -377,7 +415,7 @@ class Ui_ClassPage(object):
 
     def create_talent_button(self, icon_path, icon_size, talent_name, class_name):
         talent_button = QPushButton()
-        # print(f"create_talent_button {talent_name}")
+        print(f"create_talent_button {talent_name}")
         talent_button.setProperty("name", talent_name)
         icon = QIcon(icon_path)
         talent_button.setIcon(icon)
