@@ -195,46 +195,45 @@ class Ui_ClassPage(object):
         else:
             return shortcut.capitalize()  # 其他按键首字母大写
 
-
     def toggle_start_pause(self):
+        """Start or stop the RotationThread."""
         if not self.is_running:
-            print("Starting RotationThread...")
-            self.start_button.setText("停止")
+            # Starting the rotation thread
+            print("QT Starting RotationThread...")
+            self.start_button.setText("Stop")
             self.start_button.setIcon(QIcon(Functions.set_svg_icon("pause.svg")))
             self.is_running = True
 
-            # 加载最新的配置文件
-            config_filepath = self.load_latest_config()  # 获取最新的配置文件路径
+            # Load the latest configuration file
+            config_filepath = self.load_latest_config()
 
             if not config_filepath:
-                print("未找到配置文件，无法启动旋转线程")
+                print("Configuration file not found, unable to start the rotation thread.")
                 return
 
-            # 如果线程不存在，则创建并启动
+            # Create and start a new RotationThread if it doesn't exist
             if not self.rotation_thread:
                 print("Creating and starting new RotationThread.")
                 self.rotation_thread = RotationThread(
-                    config_file='rotation_config.yaml',  # 旋转配置文件
-                    keybind_file=config_filepath,  # 使用最新配置文件路径作为键绑定文件
+                    config_file='rotation_config.yaml',
+                    keybind_file=config_filepath,
                     class_name=self.selected_class_name,
                     talent_name=self.selected_talent_name
                 )
                 self.rotation_thread.finished.connect(self.on_thread_finished)
 
-            self.rotation_thread.start()  # 启动线程
+            self.rotation_thread.start()  # Start the thread
             print("RotationThread started.")
+
         else:
-            if self.rotation_thread and self.is_running:
-                if self.start_button.text() == "暂停":
-                    print("Pausing RotationThread.")
-                    self.start_button.setText("继续")
-                    self.start_button.setIcon(QIcon(Functions.set_svg_icon("start.svg")))
-                    self.rotation_thread.pause()  # 暂停线程
-                else:
-                    print("Resuming RotationThread.")
-                    self.start_button.setText("暂停")
-                    self.start_button.setIcon(QIcon(Functions.set_svg_icon("pause.svg")))
-                    self.rotation_thread.resume()  # 恢复线程
+            # Stopping the thread
+            print("QT stopping RotationThread...")
+            if self.rotation_thread:
+                print("Stopping RotationThread.")
+                self.rotation_thread.stop()  # Stop the RotationThread
+                self.start_button.setText("Start")
+                self.start_button.setIcon(QIcon(Functions.set_svg_icon("start.svg")))
+                self.is_running = False
 
     def on_thread_finished(self):
         # 当线程完成时处理任何清理工作
