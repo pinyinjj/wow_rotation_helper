@@ -7,7 +7,7 @@ from PySide6.QtCore import QSize
 from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWidgets import QPushButton, QGridLayout, QVBoxLayout, QLabel, QHBoxLayout, QWidget, \
     QMainWindow, QSizePolicy, QDialog
-
+from gui.core.json_settings import Settings
 from gui.core.functions import Functions
 from gui.core.json_themes import Themes
 from gui.widgets import PyGroupbox, PyPushButton, PyLoggerWindow
@@ -21,6 +21,8 @@ gui_dir = os.path.join(current_dir, "..", "..")
 class Ui_ClassPage(object):
     def __init__(self, main_window: QMainWindow):
         self.main_window = main_window
+        self.settings = Settings()
+        self.debug = self.settings.items.get("debug", "True").lower() == "true"
         self.selected_class = None
         self.selected_talent = None
         self.selected_class_name = None
@@ -85,6 +87,10 @@ class Ui_ClassPage(object):
 
         self.adjust_class_icon_spacing()
 
+        if self.debug:
+            self.load_logger_frame()
+
+    def load_logger_frame(self):
         self.log_text_edit = PyLoggerWindow(
             bg_color=self.themes["app_color"]["bg_one"],
             color=self.themes["app_color"]["text_foreground"],
@@ -205,7 +211,7 @@ class Ui_ClassPage(object):
 
                         button.setVisible(True)
                         return
-        
+
 
     def toggle_start_pause(self):
         if not self.is_running:
@@ -560,11 +566,11 @@ class Ui_ClassPage(object):
             bg_color=self.themes["app_color"]["bg_one"],
             bg_color_hover=self.themes["app_color"]["context_hover"],
             bg_color_pressed=self.themes["app_color"]["context_pressed"],
-            font_size=30
+            font_size=22
         )
 
         button.setFixedHeight(40)
-        button.setFixedWidth(40)
+        button.setFixedWidth(50)
         button.setToolTip(ability_name)
 
         def on_button_clicked():
@@ -574,8 +580,13 @@ class Ui_ClassPage(object):
                 # 获取绑定的按键并设置按钮文本
                 key_sequence = dialog.key_sequence
                 if key_sequence:
-                    button.setText(key_sequence.upper())
-                    self.config_data[ability_name] = key_sequence.upper()  # 更新配置
+                    if key_sequence.startswith("F") and key_sequence[1:].isdigit() and 1 <= int(key_sequence[1:]) <= 10:
+                        formatted_key_sequence = key_sequence.upper()
+                    else:
+                        formatted_key_sequence = key_sequence.capitalize()
+
+                    button.setText(formatted_key_sequence)
+                    self.config_data[ability_name] = formatted_key_sequence
 
         button.clicked.connect(on_button_clicked)
 
