@@ -1,7 +1,6 @@
 from PySide6.QtCore import QThread, Signal, QMutex
 from rotation import RotationHelper
 
-
 class RotationThread(QThread):
     finished = Signal()  # Signal emitted when the thread finishes
 
@@ -26,6 +25,15 @@ class RotationThread(QThread):
         """Stop the thread by signaling the rotation_helper to stop."""
         print("Stopping RotationThread.")
         self.mutex.lock()
-        self.rotation_helper.stop()  # Signal the RotationHelper to stop its loop
+        if self.rotation_helper:
+            self.rotation_helper.stop()  # Signal the RotationHelper to stop its loop
+            self.rotation_helper = None  # Clear the reference to allow memory release
         self.mutex.unlock()
 
+    def clean_up(self):
+        """Force cleanup by ensuring the instance is fully cleared."""
+        print("Cleaning up RotationHelper...")
+        self.mutex.lock()
+        self.rotation_helper = None  # Clear any remaining reference
+        self.mutex.unlock()
+        print("RotationHelper Clean Done")

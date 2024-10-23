@@ -210,6 +210,10 @@ class Ui_ClassPage(object):
 
     def toggle_start_pause(self):
         """Start or stop the RotationThread."""
+        if not self.selected_class and self.selected_talent:
+            print(f"Found unknown {self.selected_class} + {self.selected_talent}.")
+            return
+
         if not self.is_running:
             # Starting the rotation thread
             print("QT Starting RotationThread...")
@@ -242,15 +246,19 @@ class Ui_ClassPage(object):
             # Stopping the thread
             print("QT stopping RotationThread...")
             if self.rotation_thread:
-                print("Stopping RotationThread.")
                 self.rotation_thread.stop()  # Stop the RotationThread
+                self.rotation_thread.clean_up()  # Ensure cleanup of RotationHelper instance
                 self.start_button.setText("Start")
                 self.start_button.setIcon(QIcon(Functions.set_svg_icon("start.svg")))
                 self.is_running = False
 
     def on_thread_finished(self):
-        # 当线程完成时处理任何清理工作
-        self.rotation_thread = None
+        """Handle thread completion and clean up."""
+        print("RotationThread finished.")
+        if self.rotation_thread:
+            self.rotation_thread.clean_up()  # Ensure everything is cleaned up
+            self.rotation_thread = None  # Remove reference to the thread
+        self.start_button.setText("Start")
         self.is_running = False
 
     def create_button(self, icon="icon_heart.svg", size=40):
@@ -326,18 +334,22 @@ class Ui_ClassPage(object):
         class_button.clicked.connect(lambda _: self.on_class_button_clicked(class_button, on_click_callback))
         return class_button
 
-    def on_class_button_clicked(self, button, on_click_callback):
-        if self.selected_class and self.selected_class != button:
+    def on_class_button_clicked(self, class_button, on_click_callback):
+        if self.selected_talent:
+            self.selected_talent = None
+            self.selected_talent_name = None
+
+        if self.selected_class and self.selected_class != class_button:
             self.selected_class.setStyleSheet(self.get_button_style(selected=False))
             self.clear_layout(self.talent_layout)
             self.clear_layout(self.talent_ability_layout)
             self.talent_group.setVisible(False)
             self.talent_ability.setVisible(False)
 
-        self.selected_class = button
-        self.selected_class_name = button.property("name")
-        button.setStyleSheet(self.get_button_style(selected=True))
-        on_click_callback(button)
+        self.selected_class = class_button
+        self.selected_class_name = class_button.property("name")
+        class_button.setStyleSheet(self.get_button_style(selected=True))
+        on_click_callback(class_button)
 
         self.talent_group.setVisible(True)
 

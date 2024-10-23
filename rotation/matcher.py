@@ -87,7 +87,7 @@ class ImageMatcher:
                 print(f"Failed to take screenshot: {e}")
                 return None
         else:
-            time.sleep(0.3)
+            time.sleep(1)
             print("窗口未激活，不截图")
             return None
 
@@ -285,7 +285,6 @@ class ImageMatcher:
         主图像匹配流程。
         """
         screenshot = self.take_screenshot()
-
         try:
             best_match = self.find_best_match(screenshot)
             self.handler_result(best_match)
