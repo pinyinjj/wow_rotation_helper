@@ -22,7 +22,7 @@ class Ui_ClassPage(object):
     def __init__(self, main_window: QMainWindow):
         self.main_window = main_window
         self.settings = Settings()
-        self.debug = self.settings.items.get("debug", "True").lower() == "true"
+        self.debug = self.settings.items.get("debug", "False").lower() == "true"
         self.selected_class = None
         self.selected_talent = None
         self.selected_class_name = None
@@ -217,9 +217,6 @@ class Ui_ClassPage(object):
         if not self.is_running:
             # Starting the rotation thread
             print("QT Starting RotationThread...")
-            self.start_button.setText("Stop")
-            self.start_button.setIcon(QIcon(Functions.set_svg_icon("pause.svg")))
-            self.is_running = True
 
             # Load the latest configuration file
             config_filepath = self.load_latest_config()
@@ -228,8 +225,9 @@ class Ui_ClassPage(object):
                 print("Configuration file not found, unable to start the rotation thread.")
                 return
 
-            # Create and start a new RotationThread if it doesn't exist
-            if not self.rotation_thread:
+            # Ensure RotationThread is not already running
+            if not self.rotation_thread or not self.rotation_thread.isRunning():
+                # Create and start a new RotationThread
                 print("Creating and starting new RotationThread.")
                 self.rotation_thread = RotationThread(
                     config_file='rotation_config.yaml',
@@ -239,18 +237,32 @@ class Ui_ClassPage(object):
                 )
                 self.rotation_thread.finished.connect(self.on_thread_finished)
 
-            self.rotation_thread.start()  # Start the thread
-            print("RotationThread started.")
+                self.rotation_thread.start()  # Start the thread
+                print("RotationThread started.")
+
+                # Update button appearance after successfully starting the thread
+                self.start_button.setText("Stop")
+                self.start_button.setIcon(QIcon(Functions.set_svg_icon("pause.svg")))
+                self.is_running = True
+            else:
+                print("RotationThread is already running.")
 
         else:
             # Stopping the thread
             print("QT stopping RotationThread...")
-            if self.rotation_thread:
+
+            # Ensure the RotationThread is running before trying to stop it
+            if self.rotation_thread and self.rotation_thread.isRunning():
                 self.rotation_thread.stop()  # Stop the RotationThread
                 self.rotation_thread.clean_up()  # Ensure cleanup of RotationHelper instance
+                self.rotation_thread.wait()  # Wait for the thread to finish
+
+                # Update button appearance after the thread has stopped
                 self.start_button.setText("Start")
                 self.start_button.setIcon(QIcon(Functions.set_svg_icon("start.svg")))
                 self.is_running = False
+            else:
+                print("RotationThread is not running or already stopped.")
 
     def on_thread_finished(self):
         """Handle thread completion and clean up."""
