@@ -84,7 +84,7 @@ class SetupMainWindow:
             "is_active": False
         },
         {
-            "btn_icon": "macro.png",
+            "btn_icon": "macro.svg",
             "btn_id": "btn_macros",  # 自己新增的页面
             "btn_text": "Macro",
             "btn_tooltip": "推荐的宏",
