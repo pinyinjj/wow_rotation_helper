@@ -49,7 +49,7 @@ class RotationHelper:
             try:
                 if keyboard.is_pressed('1'):
                     self.matcher.match_images()
-                time.sleep(0.5)
+                time.sleep(0.2)
             except Exception as e:
                 print(f"Error during execution: {e}")
                 break
