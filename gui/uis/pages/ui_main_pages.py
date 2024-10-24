@@ -165,6 +165,8 @@ class Ui_MainPages(object):
         self.ui_capture_page = Ui_CapturePage(self.main_window)
         self.ui_capture_page.setupUi(self.page_capture)
         self.pages.addWidget(self.page_capture)
+        self.pages.currentChanged.connect(self.on_page_changed)
+
         self.pages.setFocusPolicy(Qt.ClickFocus)
         self.main_pages_layout.addWidget(self.pages)
 
@@ -174,6 +176,14 @@ class Ui_MainPages(object):
         QMetaObject.connectSlotsByName(MainPages)
 
     # setupUi
+
+    def on_page_changed(self, index):
+        """Ensure focus is set on CaptureWidget when the capture page is shown."""
+        # Assuming the Capture Page is the last page, adjust index if it's not
+        if index == self.pages.indexOf(self.page_capture):
+            # Ensure the capture widget receives focus
+            self.ui_capture_page.capture_widget.setFocus()
+
 
     def retranslateUi(self, MainPages):
         MainPages.setWindowTitle(QCoreApplication.translate("MainPages", u"Form", None))
