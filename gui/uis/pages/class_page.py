@@ -42,7 +42,8 @@ class Ui_ClassPage(object):
         self.themes = themes.items
 
         self.page_skills_layout = QVBoxLayout(page_skills)
-        # 创建 Class Group
+
+        # Class Group
         self.class_group = PyGroupbox("Class Selection", self.themes)
         self.class_layout = QGridLayout()
         self.class_group.setLayout(self.class_layout)
@@ -75,6 +76,12 @@ class Ui_ClassPage(object):
         self.start_button.clicked.connect(self.toggle_start_pause)
         self.button_layout.addWidget(self.start_button)
 
+        # reload button
+        self.reload_button = self.create_button("start.svg")
+        self.reload_button.setText("Reload")
+        self.reload_button.clicked.connect(self.reload_icons)
+        self.button_layout.addWidget(self.reload_button)
+
         class_icon_path = os.path.join(gui_dir, "uis", "icons", "class_icons")
         class_icons = [f for f in os.listdir(class_icon_path) if f.endswith(".tga")]
 
@@ -89,6 +96,10 @@ class Ui_ClassPage(object):
 
         if self.debug:
             self.load_logger_frame()
+
+    def reload_icons(self):
+        self.load_ability_icons(self.selected_class_name, self.selected_talent_name)
+        print(f'reload for {self.selected_class_name, self.selected_talent_name}')
 
     def load_logger_frame(self):
         self.log_text_edit = PyLoggerWindow(
@@ -153,8 +164,6 @@ class Ui_ClassPage(object):
 
         # 打印收集到的配置数据
         print(f"更新后的配置数据: {existing_config}")
-
-    import os
 
     def load_latest_config(self):
         if not self.selected_class_name or not self.selected_talent_name:
@@ -384,10 +393,10 @@ class Ui_ClassPage(object):
 
         # 更新按钮样式
         button.setStyleSheet(self.get_button_style(selected=True))
-        print("Button style updated.")
+        # print("Button style updated.")
 
         # 清空天赋能力布局
-        print("Clearing talent ability layout.")
+        # print("Clearing talent ability layout.")
         self.clear_layout(self.talent_ability_layout)
 
         # 更新选中的天赋名称
@@ -396,26 +405,26 @@ class Ui_ClassPage(object):
 
         # 隐藏天赋能力部分
         self.talent_ability.setVisible(False)
-        print("Talent ability hidden.")
+        # print("Talent ability hidden.")
 
         # 在选择天赋后加载最新的配置文件
-        print("Loading latest config...")
+        # print("Loading latest config...")
         self.load_latest_config()  # 加载最新配置
-        print("Config loaded.")
+        # print("Config loaded.")
 
         # 加载能力图标
         print(f"Loading ability icons for Class: {class_name}, Talent: {talent_name}")
         self.load_ability_icons(class_name, talent_name)
-        print("Ability icons loaded.")
+        # print("Ability icons loaded.")
 
         # 显示天赋能力
         self.talent_ability.setVisible(True)
-        print("Talent ability visible.")
+        # print("Talent ability visible.")
 
         # 调整布局以显示能力
-        print("Relayout for ability display.")
+        # print("Relayout for ability display.")
         self.relayout_for_ability_display()
-        print("Relayout complete.")
+        # print("Relayout complete.")
 
     def clear_layout(self, layout):
         # 清理布局中的所有小部件
