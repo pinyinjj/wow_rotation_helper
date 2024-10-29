@@ -163,5 +163,3 @@ cython_debug/
 .idea/vcs.xml
 .idea/encodings.xml
 .idea/inspectionProfiles/
-
-gui/config/
