@@ -23,7 +23,7 @@ class ImageMatcher:
         self.key_mapping = key_mapping
         self.key_presser = KeyPresser(config)
         self.screenshot_delay = config['screenshot_delay']
-        self.shortcut_config = config['shortcuts']
+
         region_config = config['region']
         self.last_match = None
         self.region = (
@@ -35,7 +35,7 @@ class ImageMatcher:
         self.running = True
         self.manual_pause = False  # 手动暂停标志
         self.cast_time_skills = {
-            'ConvoketheSpirits': 4,
+            '20241030222919': 4,
         }
 
     def is_cast_time_skill(self, key):

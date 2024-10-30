@@ -29,7 +29,6 @@ class RotationHelper:
             'delay': {'min': 0.069, 'max': 0.160},
             'screenshot_delay': 0.3,
             'region': {'x': 0, 'y': 0, 'width': 80, 'height': 200},
-            'shortcuts': {'pause': 'esc', 'continue': 'F7'}
         }
         try:
             with open(config_file, 'r', encoding='utf-8') as file:
