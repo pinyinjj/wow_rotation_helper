@@ -163,3 +163,4 @@ cython_debug/
 .idea/vcs.xml
 .idea/encodings.xml
 .idea/inspectionProfiles/
+gui/test/selected_screenshot.png
