@@ -71,16 +71,18 @@ class Ui_ClassPage(object):
         self.load_button.clicked.connect(self.save_config_with_rules)
         self.button_layout.addWidget(self.load_button)
 
+        # reload button
+        self.reload_button = self.create_button("refresh.svg")
+        self.reload_button.setText("Reload")
+        self.reload_button.clicked.connect(self.reload_icons)
+        self.button_layout.addWidget(self.reload_button)
+
         self.start_button = self.create_button("start.svg")
         self.start_button.setText("Start")
         self.start_button.clicked.connect(self.toggle_start_pause)
         self.button_layout.addWidget(self.start_button)
 
-        # reload button
-        self.reload_button = self.create_button("start.svg")
-        self.reload_button.setText("Reload")
-        self.reload_button.clicked.connect(self.reload_icons)
-        self.button_layout.addWidget(self.reload_button)
+
 
         class_icon_path = os.path.join(gui_dir, "uis", "icons", "class_icons")
         class_icons = [f for f in os.listdir(class_icon_path) if f.endswith(".tga")]
