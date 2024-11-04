@@ -4,7 +4,7 @@ import sys
 
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtCore import QSize
-from PySide6.QtGui import QIcon, Qt
+from PySide6.QtGui import QIcon, Qt, QPixmap
 from PySide6.QtWidgets import QPushButton, QGridLayout, QVBoxLayout, QLabel, QHBoxLayout, QWidget, \
     QMainWindow, QSizePolicy, QDialog
 from gui.core.json_settings import Settings
@@ -321,23 +321,6 @@ class Ui_ClassPage(object):
 
         return button
 
-    def save_config_to_file(self, file_path):
-        """保存当前所有绑定的技能和快捷键到文件，并打印写入流"""
-        try:
-            # 打印当前即将保存的配置内容
-            print(f"准备写入的配置数据: {self.config_data}")
-
-            # 打开文件并写入
-            with open(file_path, 'w', encoding='utf-8') as config_file:
-                json.dump(self.config_data, config_file, indent=4, ensure_ascii=False)
-
-            # 打印成功消息和文件路径
-            print(f"配置已成功写入到 {file_path}")
-
-        except Exception as e:
-            # 打印异常信息
-            print(f"保存配置文件时出错: {e}")
-
     def adjust_class_icon_spacing(self, spacing_factor=1):
         window_width = self.main_window.width()
         columns = 6
@@ -449,24 +432,55 @@ class Ui_ClassPage(object):
         self.adjust_main_window_size()
 
     def create_talent_button(self, icon_path, icon_size, talent_name, class_name):
+        # Create the QPushButton
         talent_button = QPushButton()
         print(f"create_talent_button {talent_name}")
+
+        # Set a property for identifying the button
         talent_button.setProperty("name", talent_name)
-        icon = QIcon(icon_path)
+
+        # Load the image using QPixmap
+        pixmap = QPixmap(icon_path)
+
+        # Scale the pixmap to fit the button size, keeping aspect ratio
+        scaled_pixmap = pixmap.scaled(
+            icon_size.width() - 10,
+            icon_size.height() - 10,
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation
+        )
+
+        # Create a QIcon from the scaled QPixmap and set it on the button
+        icon = QIcon(scaled_pixmap)
         talent_button.setIcon(icon)
         talent_button.setIconSize(QSize(icon_size.width() - 10, icon_size.height() - 10))
+
+        # Set the button's fixed size
         talent_button.setFixedSize(icon_size.width(), icon_size.height())
+
+        # Apply the stylesheet
         talent_button.setStyleSheet(self.get_button_style(selected=False))
-        talent_button.clicked.connect(lambda _: self.on_talent_button_clicked(talent_button, talent_name, class_name))
+
+        # Connect the button click signal to the appropriate slot
+        talent_button.clicked.connect(
+            lambda _: self.on_talent_button_clicked(talent_button, talent_name, class_name)
+        )
+
         return talent_button
 
     def load_talent_icons(self, class_name):
+        # Clear the existing icons in the layout
         for i in reversed(range(self.talent_layout.count())):
             self.talent_layout.itemAt(i).widget().setParent(None)
 
+        # Define the path to the icons folder
         talent_icon_path = os.path.join(gui_dir, "uis", "icons", "talent_icons", class_name)
-        talent_icons = [f for f in os.listdir(talent_icon_path) if f.endswith(".tga")]
 
+        # Include multiple image extensions
+        valid_extensions = {".tga", ".png", ".jpg", ".jpeg", ".bmp"}
+        talent_icons = [f for f in os.listdir(talent_icon_path) if os.path.splitext(f)[1].lower() in valid_extensions]
+
+        # Iterate over the icons and create buttons
         for i, talent_icon in enumerate(talent_icons):
             icon_path = os.path.join(talent_icon_path, talent_icon)
             talent_name = os.path.splitext(talent_icon)[0].lower()
