@@ -2,7 +2,7 @@ import sys
 import os
 from PySide6.QtCore import Qt, QRect, QPoint, QSize
 from PySide6.QtGui import QPainter, QPen, QPixmap, QGuiApplication, QColor, QRegion, QIcon
-from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QMainWindow, QPushButton, QHBoxLayout
+from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QMainWindow, QPushButton, QHBoxLayout, QFileDialog
 
 from gui.core.functions import Functions
 
@@ -41,7 +41,20 @@ class Ui_CapturePage(QMainWindow):
         self.full_screen_label.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
 
     def save_as(self):
-        pass
+        """ Save the cropped screenshot to a user-selected directory. """
+        if self.cropped_image_label.pixmap() is None:
+            print("No image to save.")
+            return
+
+        # Open a dialog to select the save file path
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Image", "", "PNG Files (*.png);;All Files (*)"
+        )
+
+        if file_path:
+            # Save the pixmap from cropped_image_label as an image file
+            self.cropped_image_label.pixmap().save(file_path, "PNG")
+            print(f"Screenshot saved to: {file_path}")
 
     def create_button(self, icon="icon_heart.svg", size=40):
         button = QPushButton()
@@ -80,6 +93,10 @@ class Ui_CapturePage(QMainWindow):
         # Grab the current screen's screenshot
         screen = QGuiApplication.primaryScreen()
         self.screenshot = screen.grabWindow(0).toImage()
+
+        self.x0 = self.y0 = self.x1 = self.y1 = 0
+        self.is_selecting = False
+        self.selection_rect = QRect()
 
         # Display the screenshot in the full-screen label
         self.full_screen_label.setPixmap(QPixmap.fromImage(self.screenshot))
