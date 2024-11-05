@@ -1,5 +1,7 @@
 import sys
 import os
+from datetime import datetime
+
 from PySide6.QtCore import Qt, QRect, QPoint, QSize
 from PySide6.QtGui import QPainter, QPen, QPixmap, QGuiApplication, QColor, QRegion, QIcon
 from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QMainWindow, QPushButton, QHBoxLayout, QFileDialog
@@ -40,15 +42,20 @@ class Ui_CapturePage(QMainWindow):
         self.full_screen_label.setGeometry(QGuiApplication.primaryScreen().geometry())
         self.full_screen_label.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
 
+
+
     def save_as(self):
         """ Save the cropped screenshot to a user-selected directory. """
         if self.cropped_image_label.pixmap() is None:
             print("No image to save.")
             return
 
-        # Open a dialog to select the save file path
+        # Generate a current timestamp string
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        # Open a dialog to select the save file path, with a default name based on the timestamp
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Image", "", "PNG Files (*.png);;All Files (*)"
+            self, "Save Image", f"{timestamp}.png", "PNG Files (*.png);;All Files (*)"
         )
 
         if file_path:
