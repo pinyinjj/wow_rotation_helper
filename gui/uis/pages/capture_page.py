@@ -31,10 +31,15 @@ class Ui_CapturePage(QMainWindow):
         self.save_icon_button.setText("Save Icon")
         self.save_icon_button.clicked.connect(self.save_as)
 
+        self.get_info_button = self.create_button()  # 假设你有一个 info_icon.svg 文件
+        self.get_info_button.setText("Get Info")
+        self.get_info_button.clicked.connect(self.get_selection_info)
+
         self.capture_page_layout = QVBoxLayout(capture_page)
         self.button_layout = QHBoxLayout()
         self.button_layout.addWidget(self.start_button)
         self.button_layout.addWidget(self.save_icon_button)
+        self.button_layout.addWidget(self.get_info_button)
         self.capture_page_layout.addWidget(self.cropped_image_label)
         self.capture_page_layout.addLayout(self.button_layout)
 
@@ -42,7 +47,20 @@ class Ui_CapturePage(QMainWindow):
         self.full_screen_label.setGeometry(QGuiApplication.primaryScreen().geometry())
         self.full_screen_label.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
 
+    def get_selection_info(self):
+        """ 获取当前选中的截图区域的左上角坐标，和长宽，并打印显示。 """
+        if self.selection_rect.isNull():
+            print("No selection made.")
+            return
 
+        x0, y0 = self.x0, self.y0
+        width = abs(self.x1 - self.x0)
+        height = abs(self.y1 - self.y0)
+
+        print(f"Selection Info:")
+        print(f"Left Top Corner (x, y): ({x0}, {y0})")
+        print(f"Width: {width}")
+        print(f"Height: {height}")
 
     def save_as(self):
         """ Save the cropped screenshot to a user-selected directory. """
