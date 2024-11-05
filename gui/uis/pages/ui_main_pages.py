@@ -182,7 +182,7 @@ class Ui_MainPages(object):
         # Assuming the Capture Page is the last page, adjust index if it's not
         if index == self.pages.indexOf(self.page_capture):
             # Ensure the capture widget receives focus
-            self.ui_capture_page.capture_widget.setFocus()
+            self.ui_capture_page.setFocus()
 
 
     def retranslateUi(self, MainPages):

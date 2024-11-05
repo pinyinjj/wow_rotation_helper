@@ -66,7 +66,7 @@ class Ui_ClassPage(object):
         self.button_layout = QHBoxLayout()
         self.page_skills_layout.addLayout(self.button_layout)
 
-        self.load_button = self.create_button("save.svg")
+        self.load_button = self.create_button("save_icon.svg")
         self.load_button.setText("Save")
         self.load_button.clicked.connect(self.save_config_with_rules)
         self.button_layout.addWidget(self.load_button)
