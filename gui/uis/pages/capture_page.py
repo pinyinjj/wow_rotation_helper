@@ -2,9 +2,11 @@ import sys
 import os
 from datetime import datetime
 
+import yaml
 from PySide6.QtCore import Qt, QRect, QPoint, QSize
 from PySide6.QtGui import QPainter, QPen, QPixmap, QGuiApplication, QColor, QRegion, QIcon
-from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QMainWindow, QPushButton, QHBoxLayout, QFileDialog
+from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QMainWindow, QPushButton, QHBoxLayout, QFileDialog, \
+    QGridLayout
 
 from gui.core.functions import Functions
 
@@ -23,46 +25,68 @@ class Ui_CapturePage(QMainWindow):
         self.cropped_image_label.setFixedSize(200, 200)
         self.cropped_image_label.setStyleSheet("border: 1px solid black;")
 
+        self.coordinates_label = QLabel(self)
+        self.coordinates_label.setStyleSheet("color: white; background-color: rgba(0, 0, 0, 150); padding: 5px;")
+        self.coordinates_label.setVisible(False)
+
         self.start_button = self.create_button("trim_icon.svg")
         self.start_button.setText("Capture")
         self.start_button.clicked.connect(self.start_capture)
 
         self.save_icon_button = self.create_button("save_icon.svg")
         self.save_icon_button.setText("Save Icon")
-        self.save_icon_button.clicked.connect(self.save_as)
+        self.save_icon_button.clicked.connect(self.save_icon_as)
 
-        self.get_info_button = self.create_button()  # 假设你有一个 info_icon.svg 文件
-        self.get_info_button.setText("Get Info")
-        self.get_info_button.clicked.connect(self.get_selection_info)
+        self.get_info_button = self.create_button()
+        self.get_info_button.setText("Save Location")
+        self.get_info_button.clicked.connect(self.save_selection_info)
 
-        self.capture_page_layout = QVBoxLayout(capture_page)
+        self.capture_page_layout = QGridLayout(capture_page)
+
+        self.info_layout = QVBoxLayout()
         self.button_layout = QHBoxLayout()
         self.button_layout.addWidget(self.start_button)
         self.button_layout.addWidget(self.save_icon_button)
         self.button_layout.addWidget(self.get_info_button)
-        self.capture_page_layout.addWidget(self.cropped_image_label)
-        self.capture_page_layout.addLayout(self.button_layout)
+        self.capture_page_layout.addWidget(self.cropped_image_label, 0, 0)
+        self.capture_page_layout.addWidget(self.coordinates_label, 0, 1)
+        self.capture_page_layout.addLayout(self.button_layout, 1, 0, 1, 2)
 
         self.full_screen_label = QLabel()
         self.full_screen_label.setGeometry(QGuiApplication.primaryScreen().geometry())
         self.full_screen_label.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
 
-    def get_selection_info(self):
-        """ 获取当前选中的截图区域的左上角坐标，和长宽，并打印显示。 """
+    def save_selection_info(self):
+        """Save the current selection coordinates to a YAML file."""
         if self.selection_rect.isNull():
             print("No selection made.")
             return
 
-        x0, y0 = self.x0, self.y0
-        width = abs(self.x1 - self.x0)
-        height = abs(self.y1 - self.y0)
+        new_region = {
+            "x1": self.x0,
+            "y1": self.y0,
+            "x2": self.x1,
+            "y2": self.y1
+        }
 
-        print(f"Selection Info:")
-        print(f"Left Top Corner (x, y): ({x0}, {y0})")
-        print(f"Width: {width}")
-        print(f"Height: {height}")
+        config = self.load_config()
+        config['region'] = new_region
+        self.save_config(config)
 
-    def save_as(self):
+    def load_config(self):
+        """Load the current configuration from the YAML file."""
+        try:
+            with open('rotation/rotation_config.yaml', 'r', encoding='utf-8') as file:
+                return yaml.safe_load(file) or {}
+        except FileNotFoundError:
+            return {}
+
+    def save_config(self, config):
+        """Save the configuration to the YAML file."""
+        with open('rotation/rotation_config.yaml', 'w', encoding='utf-8') as file:
+            yaml.dump(config, file)
+
+    def save_icon_as(self):
         """ Save the cropped screenshot to a user-selected directory. """
         if self.cropped_image_label.pixmap() is None:
             print("No image to save.")
@@ -168,6 +192,14 @@ class Ui_CapturePage(QMainWindow):
             self.setWindowState(Qt.WindowNoState)
             self.setCursor(Qt.ArrowCursor)
             # self.show()
+            self.display_coordinates(self.x0, self.y0, self.x1, self.y1)
+
+    def display_coordinates(self, x0, y0, x1, y1):
+        """ Display the coordinates of the selection. """
+        self.coordinates_label.setText(f"x0y0: ({x0}, {y0}), x1y1: ({x1}, {y1})")
+        self.coordinates_label.adjustSize()
+        self.coordinates_label.move(10, 10)
+        self.coordinates_label.setVisible(True)
 
     def display_cropped_image(self, cropped_image):
         """ Display the cropped screenshot in the QLabel widget. """
@@ -202,7 +234,7 @@ class Ui_CapturePage(QMainWindow):
                 masked_region = full_region
 
             painter.setClipRegion(masked_region)
-            painter.fillRect(self.rect(), QColor(0, 0, 0, 150))  # Transparent black
+            painter.fillRect(self.rect(), QColor(0, 0, 0, 90))  # Transparent black
 
             # Draw the selection rectangle
             if not self.selection_rect.isNull():

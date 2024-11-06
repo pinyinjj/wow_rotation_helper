@@ -1,15 +1,10 @@
-
-screenshot_delay: 0.3
-
-wow_directory: "C:/Program Files (x86)/World of Warcraft/"  # 请替换为实际路径
-
 delay:
+  max: 0.16
   min: 0.069
-  max: 0.160
-
 region:
   x1: 0
+  x2: 55
   y1: 0
-  x2: 65
-  y2: 65
-
+  y2: 53
+screenshot_delay: 0.3
+wow_directory: C:/Program Files (x86)/World of Warcraft/
