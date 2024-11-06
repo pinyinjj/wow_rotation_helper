@@ -3,8 +3,8 @@ delay:
   min: 0.069
 region:
   x1: 0
-  x2: 55
+  x2: 68
   y1: 0
-  y2: 53
+  y2: 67
 screenshot_delay: 0.3
 wow_directory: C:/Program Files (x86)/World of Warcraft/

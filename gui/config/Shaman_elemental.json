@@ -1,1 +1,12 @@
-{}
+{
+    "spell_nature_lightning": "f1",
+    "spell_fire_flameshock": "f2",
+    "spell_nature_lightningshield": "=",
+    "spell_shaman_lavaburst": "f3",
+    "shaman_talent_elementalblast": "f4",
+    "spell_nature_chainlightning": "2",
+    "spell_shaman_earthquake": "f5",
+    "spell_nature_cyclone": "t",
+    "achievement_raidprimalist_windelemental": "-",
+    "inv_stormelemental": "f6"
+}
