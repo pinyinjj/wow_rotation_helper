@@ -6,7 +6,7 @@ from PySide6.QtCore import QCoreApplication
 from PySide6.QtCore import QSize
 from PySide6.QtGui import QIcon, Qt, QPixmap
 from PySide6.QtWidgets import QPushButton, QGridLayout, QVBoxLayout, QLabel, QHBoxLayout, QWidget, \
-    QMainWindow, QSizePolicy, QDialog
+    QMainWindow, QSizePolicy, QDialog, QMessageBox, QInputDialog, QLineEdit
 from gui.core.json_settings import Settings
 from gui.core.functions import Functions
 from gui.core.json_themes import Themes
@@ -694,10 +694,48 @@ class Ui_ClassPage(object):
         add_icon_button.setToolTip("Add a new icon")
 
         def on_add_icon_clicked():
-            """Functionality for when 'Add Icon' button is clicked."""
-            # Implement the desired behavior here, such as opening a dialog to add a new icon
-            print("Add Icon button clicked!")
+            # Show input dialog to get skill name
+            skill_name, ok = QInputDialog.getText(
+                self.main_window if hasattr(self, 'main_window') else None,
+                "Enter Skill Name",
+                "Please enter the skill name:",
+                QLineEdit.Normal
+            )
 
+            # Check if the user clicked OK and provided a skill name
+            if ok and skill_name.strip():
+                try:
+                    # Call download_icon and check the status
+                    status = Functions.download_icon(skill_name.strip(), self.selected_class_name,
+                                                     self.selected_talent_name)
+
+                    # Check return status and show appropriate message
+                    if status == 1:
+                        QMessageBox.information(self.main_window if hasattr(self, 'main_window') else None, "Success",
+                                                f"Icon for '{skill_name}' downloaded successfully.")
+                    elif status == -1:
+                        QMessageBox.critical(self.main_window if hasattr(self, 'main_window') else None, "Error",
+                                             f"Failed to download icon: HTTP or connection issue.")
+                    elif status == -2:
+                        QMessageBox.critical(self.main_window if hasattr(self, 'main_window') else None, "Error",
+                                             f"Failed to save the icon for '{skill_name}'.")
+                    elif status == -3:
+                        QMessageBox.critical(self.main_window if hasattr(self, 'main_window') else None, "Error",
+                                             f"Icon link not found for '{skill_name}'.")
+                    elif status == -4:
+                        QMessageBox.critical(self.main_window if hasattr(self, 'main_window') else None, "Error",
+                                             f"An exception occurred while downloading the icon for '{skill_name}'.")
+                    else:
+                        QMessageBox.warning(self.main_window if hasattr(self, 'main_window') else None, "Unknown Error",
+                                            "An unknown error occurred.")
+                except Exception as e:
+                    # Handle any unexpected errors during execution
+                    QMessageBox.critical(self.main_window if hasattr(self, 'main_window') else None, "Error",
+                                         f"An unexpected error occurred: {str(e)}")
+            else:
+                # If the user cancels or leaves input empty
+                QMessageBox.warning(self.main_window if hasattr(self, 'main_window') else None, "Input Canceled",
+                                    "Skill name input was canceled or empty.")
         add_icon_button.clicked.connect(on_add_icon_clicked)
 
         return add_icon_button

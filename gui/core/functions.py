@@ -52,41 +52,73 @@ class Functions:
         image = os.path.normpath(os.path.join(path, image_name))
         return image
 
-    def download_icon(skill_name):
-        # 设置 ChromeOptions 以启用无头模式
+    def download_icon(skill_name, class_name, talent_name):
+        # Set up the directory relative to the project root
+        save_folder = os.path.join("gui", "uis", "icons", "talent_icons", class_name, talent_name)
+
+        # Ensure the directory exists
+        os.makedirs(save_folder, exist_ok=True)
+        print(f"Directory verified for saving icons: {save_folder}")
+
         chrome_options = Options()
-        chrome_options.add_argument("--headless")  # 无头模式
+        chrome_options.add_argument("--headless")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("window-size=1920,1080")  # 设置窗口大小
+        chrome_options.add_argument("window-size=1920,1080")
 
-        # 设置 ChromeDriver 路径
-        service = Service(executable_path="../../chromedriver.exe")  # 替换为你的 chromedriver 路径
-        driver = webdriver.Chrome(service=service, options=chrome_options)
+        # Set the correct path for chromedriver relative to this file's location
+        chromedriver_path = os.path.join(os.path.dirname(__file__), "../../chromedriver.exe")
+        print(f"Attempting to use chromedriver at: {chromedriver_path}")
 
-        url = f'https://www.wowhead.com/cn/spells/abilities/name:{skill_name}'
-        driver.get(url)
+        try:
+            service = Service(executable_path=chromedriver_path)
+            driver = webdriver.Chrome(service=service, options=chrome_options)
 
-        # 使用 JavaScript 获取图标链接
-        icon_url = driver.execute_script('''
-            const iconElement = document.querySelector("ins");  // 选择图标元素
-            if (iconElement && iconElement.style.backgroundImage) {
-                // 提取背景图 URL 并返回
-                return iconElement.style.backgroundImage.slice(5, -2).replace('/medium/', '/large/');
-            }
-            return null;
-        ''')
+            # Construct and navigate to the URL
+            url = f'https://www.wowhead.com/cn/spells/abilities/name:{skill_name}'
+            driver.get(url)
 
-        if icon_url:
-            # 获取文件扩展名
-            file_extension = icon_url.split('.')[-1]
+            # Execute JavaScript to fetch the icon URL
+            icon_url = driver.execute_script('''
+                const iconElement = document.querySelector("ins");
+                if (iconElement && iconElement.style.backgroundImage) {
+                    return iconElement.style.backgroundImage.slice(5, -2).replace('/medium/', '/large/');
+                }
+                return null;
+            ''')
 
-            # 下载并保存图标
-            with open(f'{skill_name}.{file_extension}', 'wb') as f:
-                f.write(requests.get(icon_url).content)
-            print(f'图标已成功下载并保存为 {skill_name}.{file_extension}')
-        else:
-            print('未找到图标链接')
+            if icon_url:
+                # Determine file extension and save path
+                file_extension = icon_url.split('.')[-1]
+                icon_path = os.path.join(save_folder, f"{skill_name}.{file_extension}")
+                print(f"Saving icon to: {icon_path}")
 
-        # 关闭浏览器
-        driver.quit()
+                # Download the icon
+                response = requests.get(icon_url)
+                if response.status_code == 200:
+                    with open(icon_path, 'wb') as f:
+                        f.write(response.content)
+                    print(f"Icon successfully downloaded and saved at: {icon_path}")
+
+                    # Verify file existence and size
+                    if os.path.exists(icon_path) and os.path.getsize(icon_path) > 0:
+                        return 1  # Success
+                    else:
+                        print("Error: File not saved correctly")
+                        return -2  # Error: File not saved correctly
+                else:
+                    print("Error: Failed to download icon")
+                    return -1  # Error: Failed to download icon
+            else:
+                print("Error: Icon link not found")
+                return -3  # Error: Icon link not found
+
+        except Exception as e:
+            print(f"Exception during download: {e}")
+            return -4  # Error: Exception occurred (e.g., Chrome driver error)
+
+        finally:
+            # Ensure that driver.quit() is always called
+            print("Closing the driver.")
+            driver.quit()
+
