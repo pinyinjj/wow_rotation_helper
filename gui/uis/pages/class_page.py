@@ -71,7 +71,6 @@ class Ui_ClassPage(object):
         self.load_button.clicked.connect(self.save_config_with_rules)
         self.button_layout.addWidget(self.load_button)
 
-        # reload button
         self.reload_button = self.create_button("refresh.svg")
         self.reload_button.setText("Reload")
         self.reload_button.clicked.connect(self.reload_icons)
@@ -81,8 +80,6 @@ class Ui_ClassPage(object):
         self.start_button.setText("Start")
         self.start_button.clicked.connect(self.toggle_start_pause)
         self.button_layout.addWidget(self.start_button)
-
-
 
         class_icon_path = os.path.join(gui_dir, "uis", "icons", "class_icons")
         class_icons = [f for f in os.listdir(class_icon_path) if f.endswith(".tga")]
@@ -359,7 +356,6 @@ class Ui_ClassPage(object):
 
         self.talent_group.setVisible(True)
 
-
     def relayout_for_talent_display(self):
         self.class_layout.setVerticalSpacing(10)
         self.adjust_class_icon_spacing()
@@ -567,29 +563,32 @@ class Ui_ClassPage(object):
 
     def load_abilities(self, layout, directory, columns=6):
         """加载技能并创建按钮绑定"""
-        for i in reversed(range(layout.count())):
-            layout.itemAt(i).widget().setParent(None)
 
+        # Clear existing items in the layout
+        for i in reversed(range(layout.count())):
+            widget = layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        # Load abilities from the specified directory
         abilities = self.load_abilities_from_directory(directory)
 
         row = 0
         col = 0
 
-        for i, icon_path in enumerate(abilities):
-
+        def create_icon_widget(icon_path, tooltip_text):
+            """Creates a widget with an icon and sets up layout."""
             icon_label = QLabel()
             icon_label.setFixedSize(64, 64)
             icon_label.setScaledContents(True)
 
-            ability_name = os.path.splitext(os.path.basename(icon_path))[0]
-
             try:
                 icon_label.setPixmap(QIcon(icon_path).pixmap(64, 64))
             except Exception as e:
-                print(f"加载图标错误: {ability_name}, 错误: {e}")
+                print(f"加载图标错误: {e}")
                 icon_label.setText("No Icon")
 
-            icon_label.setToolTip(ability_name)
+            icon_label.setToolTip(tooltip_text)
 
             icon_layout = QVBoxLayout()
             icon_layout.addWidget(icon_label)
@@ -598,31 +597,110 @@ class Ui_ClassPage(object):
             icon_widget.setLayout(icon_layout)
             icon_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-            # 创建绑定按钮
+            return icon_widget
+
+        for i, icon_path in enumerate(abilities):
+            ability_name = os.path.splitext(os.path.basename(icon_path))[0]
+
+            # Create icon widget for each ability
+            icon_widget = create_icon_widget(icon_path, ability_name)
+
+            # Create binding button
             binding_button = self.create_binding_button(ability_name)
 
-            # 如果配置文件中存在绑定，将其应用
+            # Apply configuration if binding exists
             if ability_name in self.config_data:
                 shortcut = self.config_data[ability_name]
                 formatted_shortcut = self.format_shortcut(shortcut)  # 使用新方法格式化
                 binding_button.setText(formatted_shortcut)  # 显示格式化后的文本
 
+            # Setup the ability layout
             ability_layout = QHBoxLayout()
             ability_layout.setAlignment(Qt.AlignLeft)
             ability_layout.setSpacing(5)
-
             ability_layout.addWidget(icon_widget)
-            ability_layout.addWidget(binding_button)  # 添加按钮
+            ability_layout.addWidget(binding_button)
 
+            # Wrap ability layout in a widget
             ability_widget = QWidget()
             ability_widget.setLayout(ability_layout)
 
             layout.addWidget(ability_widget, row, col)
 
+            # Manage grid positioning
             col += 1
             if col == columns:
                 col = 0
                 row += 1
+
+        layout.addWidget(self.create_add_icon_widget("icon_search.svg"), row, col)
+
+    def create_add_icon_widget(self, icon='icon_heart.svg'):
+        """Creates a widget with an empty icon placeholder and an 'Add Icon' button."""
+
+        # Create an empty icon placeholder
+        icon_label = QLabel()
+        icon_label.setFixedSize(64, 64)
+        icon_label.setScaledContents(True)
+
+        icon_path = Functions.set_svg_icon(icon)
+        try:
+            icon_label.setPixmap(QIcon(icon_path).pixmap(64, 64))
+        except Exception as e:
+            print(f"加载图标错误: {e}")
+            icon_label.setText("No Icon")
+
+        # Set up the layout for the icon placeholder
+        icon_layout = QVBoxLayout()
+        icon_layout.addWidget(icon_label)
+
+        icon_widget = QWidget()
+        icon_widget.setLayout(icon_layout)
+        icon_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        # Create the 'Add Icon' button
+        add_icon_button = self.create_add_icon_button()
+        add_icon_button.setText("Add Icon")
+
+        # Combine the icon and button in a horizontal layout
+        add_icon_layout = QHBoxLayout()
+        add_icon_layout.setAlignment(Qt.AlignLeft)
+        add_icon_layout.setSpacing(5)
+        add_icon_layout.addWidget(icon_widget)
+        add_icon_layout.addWidget(add_icon_button)
+
+        # Wrap the layout in a widget
+        add_icon_ability_widget = QWidget()
+        add_icon_ability_widget.setLayout(add_icon_layout)
+
+        return add_icon_ability_widget
+
+    def create_add_icon_button(self):
+        """Creates a custom 'Add Icon' button with the same style as binding buttons."""
+
+        # Create button with custom styling
+        add_icon_button = PyPushButton(
+            text="Add Icon",
+            radius=8,
+            color=self.themes["app_color"]["white"],
+            bg_color=self.themes["app_color"]["bg_one"],
+            bg_color_hover=self.themes["app_color"]["context_hover"],
+            bg_color_pressed=self.themes["app_color"]["context_pressed"],
+            font_size=20
+        )
+
+        add_icon_button.setFixedHeight(64)
+        add_icon_button.setFixedWidth(120)
+        add_icon_button.setToolTip("Add a new icon")
+
+        def on_add_icon_clicked():
+            """Functionality for when 'Add Icon' button is clicked."""
+            # Implement the desired behavior here, such as opening a dialog to add a new icon
+            print("Add Icon button clicked!")
+
+        add_icon_button.clicked.connect(on_add_icon_clicked)
+
+        return add_icon_button
 
     def create_binding_button(self, ability_name):
         """创建用于按键绑定的按钮，并设置样式"""
