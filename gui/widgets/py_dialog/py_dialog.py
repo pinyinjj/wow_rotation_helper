@@ -144,7 +144,7 @@ if __name__ == "__main__":
     ])
 
     # Optionally, add buttons after input fields
-    dialog.add_buttons()
+    # dialog.add_buttons()
 
     # Show the dialog
     dialog.exec()  # Start the dialog loop
