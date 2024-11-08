@@ -729,7 +729,7 @@ class Ui_ClassPage(object):
                                                      class_name=self.selected_class_name,
                                                      talent_name=self.selected_talent_name)
                     if status == 1:
-                        print(f"Icon for '{skill_id}' downloaded successfully.")
+                        print(f"Icon downloaded successfully.")
                         self.reload_icons()
                     else:
                         error_message = {
