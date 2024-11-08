@@ -6,4 +6,6 @@ keyboard
 PyGetWindow
 PyAutoGUI
 opencv-python
+selenium
+requests
 python == 3.9.20
