@@ -52,6 +52,13 @@ class Functions:
         image = os.path.normpath(os.path.join(path, image_name))
         return image
 
+    def set_gif(gif_name):
+        app_path = os.path.abspath(os.getcwd())
+        folder = "gui/images/gifs/"
+        path = os.path.join(app_path, folder)
+        gif = os.path.normpath(os.path.join(path, gif_name))
+        return gif
+
     def download_icon(skill_id=None, trinket_id=None, consumable_id=None, class_name='', talent_name=''):
         driver = None
         save_folder = os.path.join("gui", "uis", "icons", "talent_icons", class_name, talent_name)
@@ -103,11 +110,11 @@ class Functions:
 
             results = []
             if skill_id:
-                results.append(fetch_icon(driver, f'https://www.wowhead.com/cn/spell={skill_id}', skill_id))
+                results.append(fetch_icon(driver, f'https://www.wowhead.com/spell={skill_id}', skill_id))
             if trinket_id:
-                results.append(fetch_icon(driver, f'https://www.wowhead.com/cn/item={trinket_id}', trinket_id))
+                results.append(fetch_icon(driver, f'https://www.wowhead.com/item={trinket_id}', trinket_id))
             if consumable_id:
-                results.append(fetch_icon(driver, f'https://www.wowhead.com/cn/item={consumable_id}', consumable_id))
+                results.append(fetch_icon(driver, f'https://www.wowhead.com/item={consumable_id}', consumable_id))
 
             # Return a single value if only one ID was provided; otherwise, return the list of results
             return results[0] if len(results) == 1 else results
