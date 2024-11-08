@@ -29,11 +29,11 @@ class Ui_CapturePage(QMainWindow):
         self.coordinates_label.setStyleSheet("color: white; background-color: rgba(0, 0, 0, 150); padding: 5px;")
         self.coordinates_label.setVisible(False)
 
-        self.start_button = self.create_button("trim_icon.svg")
+        self.start_button = self.create_button(icon="trim_icon.svg")
         self.start_button.setText("Capture")
         self.start_button.clicked.connect(self.start_capture)
 
-        self.save_icon_button = self.create_button("save_icon.svg")
+        self.save_icon_button = self.create_button(icon="save_icon.svg")
         self.save_icon_button.setText("Save Icon")
         self.save_icon_button.clicked.connect(self.save_icon_as)
 

@@ -66,17 +66,17 @@ class Ui_ClassPage(object):
         self.button_layout = QHBoxLayout()
         self.page_skills_layout.addLayout(self.button_layout)
 
-        self.load_button = self.create_button("save_icon.svg")
+        self.load_button = self.create_button(icon="save_icon.svg")
         self.load_button.setText("Save")
         self.load_button.clicked.connect(self.save_config_with_rules)
         self.button_layout.addWidget(self.load_button)
 
-        self.reload_button = self.create_button("refresh.svg")
+        self.reload_button = self.create_button(icon="refresh.svg")
         self.reload_button.setText("Reload")
         self.reload_button.clicked.connect(self.reload_icons)
         self.button_layout.addWidget(self.reload_button)
 
-        self.start_button = self.create_button("start.svg")
+        self.start_button = self.create_button(icon="start.svg")
         self.start_button.setText("Start")
         self.start_button.clicked.connect(self.toggle_start_pause)
         self.button_layout.addWidget(self.start_button)
@@ -281,10 +281,11 @@ class Ui_ClassPage(object):
         self.start_button.setText("Start")
         self.is_running = False
 
-    def create_button(self, icon="icon_heart.svg", size=40):
+    def create_button(self, size=40, icon=None):
         button = QPushButton()
-        icon_path = Functions.set_svg_icon(icon)
-        button.setIcon(QIcon(icon_path))
+        if icon:
+            icon_path = Functions.set_svg_icon(icon)
+            button.setIcon(QIcon(icon_path))
 
         # 设置按钮为方形，宽度增加
         button.setFixedSize(size + 100, size)
@@ -675,8 +676,77 @@ class Ui_ClassPage(object):
 
         return add_icon_ability_widget
 
+    def show_add_icon_dialog(self):
+        """Displays a custom dialog with fields for entering IDs."""
+
+        # Create the dialog
+        dialog = PyDialog()
+
+        # Access the dialog's layout and add input fields and buttons
+        layout = dialog.layout()
+
+        # Input fields for Skill ID, Trinket ID, and Consumable ID
+        skill_id_label = QLabel("Spell ID:")
+        skill_id_input = QLineEdit()
+        trinket_id_label = QLabel("Trinket ID:")
+        trinket_id_input = QLineEdit()
+        consumable_id_label = QLabel("Consumable ID:")
+        consumable_id_input = QLineEdit()
+
+        layout.addWidget(skill_id_label)
+        layout.addWidget(skill_id_input)
+        layout.addWidget(trinket_id_label)
+        layout.addWidget(trinket_id_input)
+        layout.addWidget(consumable_id_label)
+        layout.addWidget(consumable_id_input)
+
+        # Buttons for OK and Cancel
+        button_layout = QHBoxLayout()
+        ok_button = QPushButton("OK")
+        cancel_button = QPushButton("Cancel")
+
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+
+        # Connect buttons to handle dialog response
+        ok_button.clicked.connect(dialog.accept)
+        cancel_button.clicked.connect(dialog.reject)
+
+        # Display dialog and handle accepted action
+        if dialog.exec() == QDialog.Accepted:
+            skill_id = skill_id_input.text().strip()
+            trinket_id = trinket_id_input.text().strip()
+            consumable_id = consumable_id_input.text().strip()
+
+            # Process inputs if Skill ID is provided
+            if skill_id:
+                try:
+                    # Attempt to download the icon
+                    status = Functions.download_icon(skill_id=skill_id,
+                                                     trinket_id=trinket_id,
+                                                     consumable_id=consumable_id,
+                                                     class_name=self.selected_class_name,
+                                                     talent_name=self.selected_talent_name)
+                    if status == 1:
+                        print(f"Icon for '{skill_id}' downloaded successfully.")
+                        self.reload_icons()
+                    else:
+                        error_message = {
+                            -1: "Failed to download icon: HTTP or connection issue.",
+                            -2: f"Failed to save the icon for '{skill_id}'.",
+                            -3: f"Icon link not found for '{skill_id}'.",
+                            -4: f"An exception occurred while downloading the icon for '{skill_id}'."
+                        }.get(status, "An unknown error occurred.")
+                        print(f"Error: {error_message}")
+                except Exception as e:
+                    print(f"Error: An unexpected error occurred: {str(e)}")
+            else:
+                print("Warning: Please enter a valid skill ID.")
+            print("Dialog was canceled.")  # Debug: Dialog canceled
+
     def create_add_icon_button(self):
-        """Creates a custom 'Add Icon' button with the same style as binding buttons."""
+        """Creates a custom 'Add Icon' button that opens the add icon dialog on click."""
 
         # Create button with custom styling
         add_icon_button = PyPushButton(
@@ -693,104 +763,8 @@ class Ui_ClassPage(object):
         add_icon_button.setFixedWidth(120)
         add_icon_button.setToolTip("Add a new icon")
 
-        def on_add_icon_clicked():
-            print("Add Icon button clicked!")  # Debug: Check if button click is detected
-
-            # Create the custom dialog for entering Skill ID and Trinket ID
-            dialog = PyDialog(window_title="Enter Skill and Trinket IDs")
-            print("Dialog created.")  # Debug: Confirm dialog creation
-
-            # Add fields for skill ID and trinket ID
-            skill_id_label = QLabel("Skill ID:")
-            skill_id_input = QLineEdit()
-            trinket_id_label = QLabel("Trinket ID:")
-            trinket_id_input = QLineEdit()
-
-            # Arrange the dialog content
-            dialog.add_content(skill_id_label)
-            dialog.add_content(skill_id_input)
-            dialog.add_content(trinket_id_label)
-            dialog.add_content(trinket_id_input)
-
-            print("Dialog content added.")  # Debug: Confirm dialog content setup
-
-            # Show the dialog and check if the user confirmed the input
-            if dialog.exec_() == QDialog.Accepted:
-                print("Dialog accepted.")  # Debug: Confirm dialog was accepted
-
-                skill_name = skill_id_input.text().strip()
-                trinket_id = trinket_id_input.text().strip()
-                print(f"Received input - Skill ID: {skill_name}, Trinket ID: {trinket_id}")  # Debug: Display inputs
-
-                # Proceed only if skill ID is provided
-                if skill_name:
-                    try:
-                        print("Attempting to download icon...")  # Debug: Check before downloading
-                        # Attempt to download the icon
-                        status = Functions.download_icon(skill_name, self.selected_class_name,
-                                                         self.selected_talent_name)
-                        print(f"Download status: {status}")  # Debug: Display download status
-
-                        # Display messages based on the return status
-                        if status == 1:
-                            QMessageBox.information(
-                                self.main_window if hasattr(self, 'main_window') else None,
-                                "Success",
-                                f"Icon for '{skill_name}' downloaded successfully."
-                            )
-                        elif status == -1:
-                            QMessageBox.critical(
-                                self.main_window if hasattr(self, 'main_window') else None,
-                                "Error",
-                                "Failed to download icon: HTTP or connection issue."
-                            )
-                        elif status == -2:
-                            QMessageBox.critical(
-                                self.main_window if hasattr(self, 'main_window') else None,
-                                "Error",
-                                f"Failed to save the icon for '{skill_name}'."
-                            )
-                        elif status == -3:
-                            QMessageBox.critical(
-                                self.main_window if hasattr(self, 'main_window') else None,
-                                "Error",
-                                f"Icon link not found for '{skill_name}'."
-                            )
-                        elif status == -4:
-                            QMessageBox.critical(
-                                self.main_window if hasattr(self, 'main_window') else None,
-                                "Error",
-                                f"An exception occurred while downloading the icon for '{skill_name}'."
-                            )
-                        else:
-                            QMessageBox.warning(
-                                self.main_window if hasattr(self, 'main_window') else None,
-                                "Unknown Error",
-                                "An unknown error occurred."
-                            )
-                    except Exception as e:
-                        print(f"Exception occurred: {e}")  # Debug: Display exception
-                        QMessageBox.critical(
-                            self.main_window if hasattr(self, 'main_window') else None,
-                            "Error",
-                            f"An unexpected error occurred: {str(e)}"
-                        )
-                else:
-                    print("No skill ID provided.")  # Debug: No skill ID input
-                    QMessageBox.warning(
-                        self.main_window if hasattr(self, 'main_window') else None,
-                        "Input Required",
-                        "Please enter a valid skill ID."
-                    )
-            else:
-                print("Dialog was canceled.")  # Debug: Dialog canceled
-                QMessageBox.warning(
-                    self.main_window if hasattr(self, 'main_window') else None,
-                    "Dialog Canceled",
-                    "Skill ID and Trinket ID input was canceled."
-                )
-
-        add_icon_button.clicked.connect(on_add_icon_clicked)
+        # Connect button click to open the dialog
+        add_icon_button.clicked.connect(self.show_add_icon_dialog)
         print("Add Icon button setup complete.")  # Debug: Confirm setup complete
 
         return add_icon_button
