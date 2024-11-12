@@ -16,10 +16,9 @@
 
 # IMPORT PACKAGES AND MODULES
 # ///////////////////////////////////////////////////////////////
+import time
 import os
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
+from playwright.sync_api import sync_playwright
 import requests
 # APP FUNCTIONS
 # ///////////////////////////////////////////////////////////////
@@ -60,31 +59,27 @@ class Functions:
         return gif
 
     def download_icon(skill_id=None, trinket_id=None, consumable_id=None, class_name='', talent_name=''):
-        driver = None
         save_folder = os.path.join("gui", "uis", "icons", "talent_icons", class_name, talent_name)
         os.makedirs(save_folder, exist_ok=True)
         print(f"Directory verified for saving icons: {save_folder}")
 
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("window-size=1920,1080")
-        chromedriver_path = os.path.join(os.path.dirname(__file__), "../../chromedriver.exe")
-        print(f"Attempting to use chromedriver at: {chromedriver_path}")
+        def fetch_icon(page, url, item_id):
+            page.goto(url)
 
-        def fetch_icon(driver, url, item_id):
-            driver.get(url)
+            # 模拟滚动以加载动态内容
+            page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
+            page.wait_for_timeout(2000)  # 等待页面加载
 
-            icon_url = driver.execute_script('''
+            # 使用 Playwright 提取图标 URL 和项目名称
+            icon_url = page.evaluate('''() => {
                 const insElement = document.querySelector('ins[style*="background-image"][style*="large"]');
                 return insElement ? insElement.style.backgroundImage.slice(5, -2) : null;
-            ''')
+            }''')
 
-            item_name = driver.execute_script('''
+            item_name = page.evaluate('''() => {
                 const heading = document.querySelector('h1.heading-size-1');
                 return heading ? heading.innerText.trim() : null;
-            ''')
+            }''')
 
             if icon_url and item_name:
                 sanitized_name = "".join(c if c.isalnum() else "_" for c in item_name)
@@ -104,29 +99,23 @@ class Functions:
                 print(f"Error: Icon link or item name not found for {item_id}")
                 return -3
 
-        try:
-            service = Service(executable_path=chromedriver_path)
-            driver = webdriver.Chrome(service=service, options=chrome_options)
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
 
             results = []
             if skill_id:
-                results.append(fetch_icon(driver, f'https://www.wowhead.com/spell={skill_id}', skill_id))
+                results.append(fetch_icon(page, f'https://www.wowhead.com/spell={skill_id}', skill_id))
             if trinket_id:
-                results.append(fetch_icon(driver, f'https://www.wowhead.com/item={trinket_id}', trinket_id))
+                results.append(fetch_icon(page, f'https://www.wowhead.com/item={trinket_id}', trinket_id))
             if consumable_id:
-                results.append(fetch_icon(driver, f'https://www.wowhead.com/item={consumable_id}', consumable_id))
+                results.append(fetch_icon(page, f'https://www.wowhead.com/item={consumable_id}', consumable_id))
 
-            # Return a single value if only one ID was provided; otherwise, return the list of results
+            browser.close()
+
+            # 返回单一结果或结果列表
             return results[0] if len(results) == 1 else results
 
-        except Exception as e:
-            print(f"Exception during download: {e}")
-            return -4
-
-        finally:
-            print("Closing the driver.")
-            if driver:
-                driver.quit()
 
 
 

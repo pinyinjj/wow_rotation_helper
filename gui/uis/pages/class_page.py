@@ -736,7 +736,6 @@ class Ui_ClassPage(object):
                             -1: "Failed to download icon: HTTP or connection issue.",
                             -2: f"Failed to save the icon for '{skill_id}'.",
                             -3: f"Icon link not found for '{skill_id}'.",
-                            -4: f"An exception occurred while downloading the icon for '{skill_id}'."
                         }.get(status, "An unknown error occurred.")
                         print(f"Error: {error_message}")
                 except Exception as e:
