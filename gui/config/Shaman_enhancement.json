@@ -1,8 +1,20 @@
 {
+    "Ascendance": "f9",
+    "Crash_Lightning": "f5",
+    "Doom_Winds": "f6",
+    "Earth_Elemental": "f3",
     "Flametongue_Weapon": "f2",
+    "Flame_Shock": "f8",
+    "Lava_Lash": "f4",
+    "Primordial_Wave": "f10",
+    "spell_nature_chainlightning": "2",
+    "spell_nature_lightning": "8",
+    "spell_nature_lightningshield": "=",
+    "Stormstrike": "f1",
     "Windfury_Weapon": "9",
     "Add a new icon": "add icon",
-    "Primordial_Wave": "f10",
-    "Ascendance": "f9",
-    "Earth_Elemental": "f3"
+    "Voltaic_Blaze": "f8",
+    "Windstrike": "f1",
+    "Tempest": "8",
+    "Sundering": "f7"
 }
