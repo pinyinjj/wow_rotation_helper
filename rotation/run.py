@@ -29,6 +29,7 @@ class RotationHelper:
             'delay': {'min': 0.069, 'max': 0.160},
             'screenshot_delay': 0.3,
             'region': {'x': 0, 'y': 0, 'width': 80, 'height': 200},
+            'pressed_start': '`'
         }
         try:
             with open(config_file, 'r', encoding='utf-8') as file:
@@ -46,7 +47,7 @@ class RotationHelper:
 
         while self.is_running:
             try:
-                if keyboard.is_pressed('1'):
+                if keyboard.is_pressed(self.rotation_config['pressed_start']):
                     self.matcher.match_images()
                 time.sleep(0.2)
             except Exception as e:

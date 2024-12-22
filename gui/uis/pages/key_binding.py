@@ -58,6 +58,7 @@ class KeyBindDialog(QDialog):
     def map_special_key(self, key):
         """将特殊字符映射回其原始的按键值"""
         special_key_map = {
+            Qt.Key_Backtick: "`",
             Qt.Key_Exclam: "1",   # '!' -> '1'
             Qt.Key_At: "2",       # '@' -> '2'
             Qt.Key_NumberSign: "3",  # '#' -> '3'
