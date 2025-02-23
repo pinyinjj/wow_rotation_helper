@@ -1,13 +1,11 @@
 delay:
   max: 0.16
   min: 0.069
+pressed_start: '`'
 region:
   x1: 0
-  x2: 102
+  x2: 75
   y1: 0
-  y2: 101
+  y2: 72
 screenshot_delay: 0.3
-
 wow_directory: C:/Program Files (x86)/World of Warcraft/
-
-pressed_start: '`'

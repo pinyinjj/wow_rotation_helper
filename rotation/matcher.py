@@ -84,11 +84,11 @@ class ImageMatcher:
                 screenshot_bgr = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
                 return screenshot_bgr  # 返回 BGR 格式的图像
             except Exception as e:
-                print(f"Failed to take screenshot: {e}")
+                print(f"Failed to take screenshot: {e}", flush=True)
                 return None
         else:
             time.sleep(1)
-            print("窗口未激活，不截图")
+            print("窗口未激活，不截图", flush=True)
             return None
 
     def find_best_match(self, screenshot):
@@ -102,9 +102,8 @@ class ImageMatcher:
         - 匹配得分。
         """
         if screenshot is None:
-            print("未提供截图。")
+            print("未提供截图。", flush=True)
             return None, -1
-
 
         if len(screenshot.shape) == 3:
             h_screenshot, w_screenshot, _ = screenshot.shape
@@ -131,6 +130,9 @@ class ImageMatcher:
                 result = cv2.matchTemplate(screenshot, resized_template_color, cv2.TM_CCOEFF_NORMED)
                 min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
 
+                # 打印当前模板的匹配得分
+                #print(f"模板 {name} 匹配得分: {max_val:.2f}", flush=True)
+
                 # 设置匹配阈值
                 threshold = 0.8  # 您可以根据需要调整阈值
                 if max_val >= threshold:
@@ -141,17 +143,16 @@ class ImageMatcher:
                     best_match_value = max_val
                     best_match = name
 
-                # 展示模板和截图的对比（使用彩色图像）
-                # self.show_comparison(screenshot, resized_template_color, name, max_val, max_loc)
             except Exception as e:
-                print(f"匹配 {name} 时出错: {e}")
+                print(f"匹配 {name} 时出错: {e}", flush=True)
                 continue
 
-        # 可视化最佳匹配结果
-        # if best_match is not None:
-        #     # print(f"最佳匹配: {best_match}, 匹配得分: {best_match_value}")
-        # else:
-        #     print("没有找到合适的匹配。")
+        # 打印最佳匹配结果的分值
+        if best_match is not None:
+            print(f"最佳匹配: {best_match}, 匹配得分: {best_match_value:.2f}", flush=True)
+
+        else:
+            print("没有找到合适的匹配。", flush=True)
 
         return best_match, best_match_value
 
@@ -197,29 +198,33 @@ class ImageMatcher:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def handler_result(self, best_match):
+    def handler_result(self, match_result):
         """
         根据最佳匹配结果执行相应操作。
 
         参数：
-        - best_match：最佳匹配的技能名称。
+        - match_result: 一个元组 (best_match, best_match_value)
         """
         active_window = gw.getActiveWindow()
         if active_window and "魔兽世界" in active_window.title:
-            if best_match is not None:
-                best_match = str(best_match[0])
-                if isinstance(best_match, str):
-                    if best_match in self.key_mapping:
-                        self.process_skill_action(best_match)
+            if match_result is not None:
+                best_match, score = match_result
+                # 仅当匹配得分大于 0.3 时才进行按键操作
+                if score > 0.5:
+                    if isinstance(best_match, str):
+                        if best_match in self.key_mapping:
+                            self.process_skill_action(best_match)
+                        else:
+                            print(f"按键映射中未找到键 '{best_match}'。", flush=True)
                     else:
-                        print(f"按键映射中未找到键 '{best_match}'。")
+                        print("最佳匹配不是字符串，跳过输入。")
                 else:
-                    print("最佳匹配不是字符串，跳过输入。")
+                    print(f"匹配得分 {score:.2f} 低于阈值，不触发按键。")
             else:
                 print("未找到匹配项")
         else:
-            print("魔兽世界窗口未聚焦，跳过输入。")
-
+            print("魔兽世界窗口未聚焦，跳过输入。", flush=True)
+        print("-------------------------------------------------")
     def process_skill_action(self, best_match):
         """
         处理技能动作。
@@ -252,7 +257,7 @@ class ImageMatcher:
         shortcut = self.key_mapping.get(icon_name, '未知按键')
         return shortcut
 
-    def execute_skill_with_cast(self, shortcut, cast_time, icon_name):
+    def execute_skill_with_cast(self, shortcut, cast_time):
         """
         执行有施法时间的技能。
 
@@ -278,7 +283,7 @@ class ImageMatcher:
         - icon_name：技能图标名称。
         - shortcut：技能快捷键。
         """
-        print(f"{time.strftime('%H:%M:%S')} 按下“{shortcut}” 使用“{icon_name}”")
+        print(f"{time.strftime('%H:%M:%S')} 按下“{shortcut}” 使用“{icon_name}”", flush=True)
 
     def match_images(self):
         """
@@ -286,8 +291,9 @@ class ImageMatcher:
         """
         screenshot = self.take_screenshot()
         try:
-            best_match = self.find_best_match(screenshot)
-            self.handler_result(best_match)
+            match_result = self.find_best_match(screenshot)
+            self.handler_result(match_result)
         except Exception as e:
-            print(f"匹配过程中出错: {e}")
+            print(f"匹配过程中出错: {e}", flush=True)
+
 

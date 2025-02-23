@@ -71,7 +71,15 @@ class SetupMainWindow:
             "btn_icon": "wow.svg",
             "btn_id": "btn_classes",
             "btn_text": "Talents & Abilities",
-            "btn_tooltip": "Binding Page",
+            "btn_tooltip": "Retail",
+            "show_top": True,
+            "is_active": False
+        },
+        {
+            "btn_icon": "classic_wow.svg",
+            "btn_id": "btn_classic",
+            "btn_text": "Classic WOW",
+            "btn_tooltip": "Vanilla",
             "show_top": True,
             "is_active": False
         },
@@ -84,26 +92,10 @@ class SetupMainWindow:
             "is_active": False
         },
         {
-            "btn_icon": "macro.svg",
-            "btn_id": "btn_macros",  # 自己新增的页面
-            "btn_text": "Macro",
-            "btn_tooltip": "推荐的宏",
-            "show_top": True,
-            "is_active": False
-        },
-        {
             "btn_icon" : "icon_widgets.svg",
             "btn_id" : "btn_widgets",
             "btn_text" : "text",
             "btn_tooltip" : "text",
-            "show_top" : True,
-            "is_active" : False
-        },
-        {
-            "btn_icon" : "icon_add_user.svg",
-            "btn_id" : "btn_add_user",
-            "btn_text" : "Add Users",
-            "btn_tooltip" : "Add users",
             "show_top" : True,
             "is_active" : False
         },

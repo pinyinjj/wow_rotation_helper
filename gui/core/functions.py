@@ -58,10 +58,36 @@ class Functions:
         gif = os.path.normpath(os.path.join(path, gif_name))
         return gif
 
-    def download_icon(skill_id=None, trinket_id=None, consumable_id=None, class_name='', talent_name=''):
-        save_folder = os.path.join("gui", "uis", "icons", "talent_icons", class_name, talent_name)
+    import os
+    import requests
+    from playwright.sync_api import sync_playwright
+
+    def download_icon(spell_id=None, trinket_id=None, consumable_id=None, class_name='', talent_name='',
+                      game_version=''):
+        """
+        下载技能、饰品或消耗品的图标，并保存到指定目录。
+
+        参数:
+            spell_id (int): 技能 ID
+            trinket_id (int): 饰品 ID
+            consumable_id (int): 消耗品 ID
+            class_name (str): 职业名称（用于文件夹分类）
+            talent_name (str): 天赋名称（用于文件夹分类）
+            game_version (str): 游戏版本，可选 'retail'（默认）或 'classic'
+        """
+        # ✅ 只在 Classic 版本下添加 'classic' 文件夹
+        if game_version.lower() == "classic":
+            save_folder = os.path.join("gui", "uis", "icons", "classic", "talent_icons", class_name, talent_name)
+        else:
+            save_folder = os.path.join("gui", "uis", "icons", "talent_icons", class_name, talent_name)
+
         os.makedirs(save_folder, exist_ok=True)
-        print(f"Directory verified for saving icons: {save_folder}")
+        print(f"[DEBUG] 图标存储路径: {save_folder}")
+
+        # 确定 URL 前缀
+        base_url = "https://www.wowhead.com"
+        if game_version.lower() == "classic":
+            base_url = "https://www.wowhead.com/classic"
 
         def fetch_icon(page, url, item_id):
             page.goto(url)
@@ -70,7 +96,7 @@ class Functions:
             page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
             page.wait_for_timeout(2000)  # 等待页面加载
 
-            # 使用 Playwright 提取图标 URL 和项目名称
+            # 提取图标 URL 和项目名称
             icon_url = page.evaluate('''() => {
                 const insElement = document.querySelector('ins[style*="background-image"][style*="large"]');
                 return insElement ? insElement.style.backgroundImage.slice(5, -2) : null;
@@ -90,13 +116,13 @@ class Functions:
                 if response.status_code == 200:
                     with open(icon_path, 'wb') as f:
                         f.write(response.content)
-                    print(f"Icon successfully downloaded and saved as: {icon_path}")
+                    print(f"[INFO] 图标下载成功: {icon_path}")
                     return 1
                 else:
-                    print(f"Error: Failed to download icon for {item_id}")
+                    print(f"[ERROR] 下载失败: {item_id}")
                     return -1
             else:
-                print(f"Error: Icon link or item name not found for {item_id}")
+                print(f"[ERROR] 未找到图标链接或物品名称: {item_id}")
                 return -3
 
         with sync_playwright() as p:
@@ -104,17 +130,18 @@ class Functions:
             page = browser.new_page()
 
             results = []
-            if skill_id:
-                results.append(fetch_icon(page, f'https://www.wowhead.com/spell={skill_id}', skill_id))
+            if spell_id:
+                results.append(fetch_icon(page, f'{base_url}/spell={spell_id}', spell_id))
             if trinket_id:
-                results.append(fetch_icon(page, f'https://www.wowhead.com/item={trinket_id}', trinket_id))
+                results.append(fetch_icon(page, f'{base_url}/item={trinket_id}', trinket_id))
             if consumable_id:
-                results.append(fetch_icon(page, f'https://www.wowhead.com/item={consumable_id}', consumable_id))
+                results.append(fetch_icon(page, f'{base_url}/item={consumable_id}', consumable_id))
 
             browser.close()
 
             # 返回单一结果或结果列表
             return results[0] if len(results) == 1 else results
+
 
 
 

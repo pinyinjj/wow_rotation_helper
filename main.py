@@ -104,13 +104,22 @@ class MainWindow(QMainWindow):
             MainFunctions.set_page(self, self.ui.load_pages.page_2)
 
         if btn.objectName() == "btn_classes":
+            print("click retail")
             # Select Menu
             self.ui.left_menu.select_only_one(btn.objectName())
 
             MainFunctions.set_page(self, self.ui.load_pages.page_class)
 
+        if btn.objectName() == "btn_classic":
+            # Select Menu
+            print("click vanilla")
+            self.ui.left_menu.select_only_one(btn.objectName())
 
-        # 自己新增的页面
+            # Load Page Class
+            MainFunctions.set_page(self, self.ui.load_pages.classic_page_class)
+
+
+        # capture
         if btn.objectName() == "btn_capture":
             # Select Menu
             self.ui.left_menu.select_only_one(btn.objectName())
@@ -118,12 +127,7 @@ class MainWindow(QMainWindow):
             # Load Page Class
             MainFunctions.set_page(self, self.ui.load_pages.page_capture)
 
-        if btn.objectName() == "btn_macros":
-            # Select Menu
-            self.ui.left_menu.select_only_one(btn.objectName())
 
-            # Load Page Class
-            MainFunctions.set_page(self, self.ui.load_pages.page_macros)
 
         # LOAD USER PAGE
         if btn.objectName() == "btn_add_user":

@@ -17,7 +17,7 @@ class RotationHelper:
         self.binded_abilities = self.user_key_bind_loader.binded_abilities()
         self.key_mapping = self.user_key_bind_loader.get_skill_key_mapping()
 
-        self.icon_loader = SkillIconLoader(class_name, talent_name, self.binded_abilities)
+        self.icon_loader = SkillIconLoader(class_name, talent_name, self.binded_abilities, game_version="classic")
         self.images = self.icon_loader.get_images()
 
         self.matcher = ImageMatcher(self.images, self.key_mapping, self.rotation_config)

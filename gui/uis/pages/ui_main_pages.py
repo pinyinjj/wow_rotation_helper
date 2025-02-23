@@ -6,6 +6,7 @@ from qt_core import *
 from PySide6.QtCore import Qt
 # IMPORT SKILL PAGE
 from .class_page import Ui_ClassPage
+from .classic_class_page import Ui_ClassicClassPage
 from .capture_page import Ui_CapturePage
 
 class Ui_MainPages(object):
@@ -157,6 +158,14 @@ class Ui_MainPages(object):
         self.ui_class_page = Ui_ClassPage(self.main_window)
         self.ui_class_page.setupUi(self.page_class)
         self.pages.addWidget(self.page_class)
+        self.pages.setFocusPolicy(Qt.ClickFocus)
+        self.main_pages_layout.addWidget(self.pages)
+
+        # Classic Class Page
+        self.classic_page_class = QWidget()
+        self.ui_classic_class_page = Ui_ClassicClassPage(self.main_window)
+        self.ui_classic_class_page.setupUi(self.classic_page_class)
+        self.pages.addWidget(self.classic_page_class)
         self.pages.setFocusPolicy(Qt.ClickFocus)
         self.main_pages_layout.addWidget(self.pages)
 

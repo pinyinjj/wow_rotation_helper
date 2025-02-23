@@ -18,7 +18,7 @@ from ...widgets.py_dialog import PyDialog
 current_dir = os.path.dirname(os.path.abspath(__file__))
 gui_dir = os.path.join(current_dir, "..", "..")
 
-class Ui_ClassPage(object):
+class Ui_ClassicClassPage(object):
     def __init__(self, main_window: QMainWindow):
         self.main_window = main_window
         self.settings = Settings()
@@ -31,8 +31,8 @@ class Ui_ClassPage(object):
         self.is_running = False
 
         self.config_data = {}  # 用于存储技能绑定
-        self.config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "config", "config.json")
-        self.config_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "config")
+        self.config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "classic_config", "config.json")
+        self.config_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "classic_config")
 
     def setupUi(self, page_skills):
 
@@ -81,12 +81,15 @@ class Ui_ClassPage(object):
         self.start_button.clicked.connect(self.toggle_start_pause)
         self.button_layout.addWidget(self.start_button)
 
-        class_icon_path = os.path.join(gui_dir, "uis", "icons", "class_icons")
-        class_icons = [f for f in os.listdir(class_icon_path) if f.endswith(".tga")]
+        class_icon_path = os.path.join(gui_dir, "uis", "icons", "classic", "class_icons")
+        valid_extensions = (".tga", ".png", ".jpg", ".jpeg", ".bmp", ".gif")
+        class_icons = [f for f in os.listdir(class_icon_path) if f.lower().endswith(valid_extensions)]
 
         for i, icon_filename in enumerate(class_icons):
             class_name = os.path.splitext(icon_filename)[0]
             icon_path = os.path.join(class_icon_path, icon_filename)
+            print(class_name)
+            print(icon_path)
             button = self.create_class_button(icon_path, QSize(100, 100), class_name,
                                               lambda _, class_name=class_name: self.load_talent_icons(class_name))
             self.class_layout.addWidget(button, i // 6, i % 6)
@@ -416,7 +419,7 @@ class Ui_ClassPage(object):
                 widget.setParent(None)
 
     def load_ability_icons(self, class_name, talent_name):
-        talent_dir = os.path.join(gui_dir, "uis", "icons", "talent_icons", class_name, talent_name.lower())
+        talent_dir = os.path.join(gui_dir, "uis", "icons", "classic", "talent_icons", class_name, talent_name.lower())
         self.load_abilities(self.talent_ability_layout, talent_dir)
         self.talent_ability.setVisible(True)
         self.adjust_main_window_size()
@@ -471,7 +474,7 @@ class Ui_ClassPage(object):
             self.talent_layout.itemAt(i).widget().setParent(None)
 
         # Define the path to the icons folder
-        talent_icon_path = os.path.join(gui_dir, "uis", "icons", "talent_icons", class_name)
+        talent_icon_path = os.path.join(gui_dir, "uis", "icons", "classic", "talent_icons", class_name)
 
         # Include multiple image extensions
         valid_extensions = {".tga", ".png", ".jpg", ".jpeg", ".bmp"}
@@ -686,15 +689,15 @@ class Ui_ClassPage(object):
         layout = dialog.layout()
 
         # Input fields for Skill ID, Trinket ID, and Consumable ID
-        skill_id_label = QLabel("Spell ID:")
-        skill_id_input = QLineEdit()
+        spell_id_label = QLabel("Spell ID:")
+        spell_id_input = QLineEdit()
         trinket_id_label = QLabel("Trinket ID:")
         trinket_id_input = QLineEdit()
         consumable_id_label = QLabel("Consumable ID:")
         consumable_id_input = QLineEdit()
 
-        layout.addWidget(skill_id_label)
-        layout.addWidget(skill_id_input)
+        layout.addWidget(spell_id_label)
+        layout.addWidget(spell_id_input)
         layout.addWidget(trinket_id_label)
         layout.addWidget(trinket_id_input)
         layout.addWidget(consumable_id_label)
@@ -715,28 +718,28 @@ class Ui_ClassPage(object):
 
         # Display dialog and handle accepted action
         if dialog.exec() == QDialog.Accepted:
-            skill_id = skill_id_input.text().strip()
+            spell_id = spell_id_input.text().strip()
             trinket_id = trinket_id_input.text().strip()
             consumable_id = consumable_id_input.text().strip()
 
             # Process inputs if Skill ID is provided
-            if skill_id:
+            if spell_id:
                 try:
                     # Attempt to download the icon
-                    status = Functions.download_icon(spell_id=skill_id,
+                    status = Functions.download_icon(spell_id=spell_id,
                                                      trinket_id=trinket_id,
                                                      consumable_id=consumable_id,
                                                      class_name=self.selected_class_name,
                                                      talent_name=self.selected_talent_name,
-                                                     game_version='retail')
+                                                     game_version='classic')
                     if status == 1:
                         print(f"Icon downloaded successfully.")
                         self.reload_icons()
                     else:
                         error_message = {
                             -1: "Failed to download icon: HTTP or connection issue.",
-                            -2: f"Failed to save the icon for '{skill_id}'.",
-                            -3: f"Icon link not found for '{skill_id}'.",
+                            -2: f"Failed to save the icon for '{spell_id}'.",
+                            -3: f"Icon link not found for '{spell_id}'.",
                         }.get(status, "An unknown error occurred.")
                         print(f"Error: {error_message}")
                 except Exception as e:
