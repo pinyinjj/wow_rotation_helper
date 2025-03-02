@@ -148,11 +148,11 @@ class ImageMatcher:
                 continue
 
         # 打印最佳匹配结果的分值
-        if best_match is not None:
-            print(f"最佳匹配: {best_match}, 匹配得分: {best_match_value:.2f}", flush=True)
-
-        else:
-            print("没有找到合适的匹配。", flush=True)
+        # if best_match is not None:
+        #     print(f"最佳匹配: {best_match}, 匹配得分: {best_match_value:.2f}", flush=True)
+        #
+        # else:
+        #     print("没有找到合适的匹配。", flush=True)
 
         return best_match, best_match_value
 
@@ -209,23 +209,26 @@ class ImageMatcher:
         if active_window and "魔兽世界" in active_window.title:
             if match_result is not None:
                 best_match, score = match_result
-                # 仅当匹配得分大于 0.3 时才进行按键操作
+                # 当技能名称为 Battle_Shout 时，减少分值 0.1 以防止识别错误
+                if best_match == "Battle_Shout":
+                    score -= 0.15
+
+                # 仅当匹配得分大于 0.5 时才进行按键操作
                 if score > 0.5:
                     if isinstance(best_match, str):
                         if best_match in self.key_mapping:
-                            self.process_skill_action(best_match)
+                            self.process_skill_action(best_match, score)
                         else:
                             print(f"按键映射中未找到键 '{best_match}'。", flush=True)
                     else:
-                        print("最佳匹配不是字符串，跳过输入。")
-                else:
-                    print(f"匹配得分 {score:.2f} 低于阈值，不触发按键。")
+                        print("最佳匹配不是字符串，跳过输入。", flush=True)
             else:
-                print("未找到匹配项")
+                print("未找到匹配项", flush=True)
         else:
             print("魔兽世界窗口未聚焦，跳过输入。", flush=True)
-        print("-------------------------------------------------")
-    def process_skill_action(self, best_match):
+
+
+    def process_skill_action(self, best_match, score):
         """
         处理技能动作。
 
@@ -236,7 +239,7 @@ class ImageMatcher:
         needs_cast_time, cast_time = self.is_cast_time_skill(best_match)
 
         if self.last_match != best_match:
-            self.log_skill_usage(best_match, shortcut)
+            self.log_skill_usage(best_match, shortcut, score)
             self.last_match = best_match
 
         if needs_cast_time:
@@ -273,17 +276,18 @@ class ImageMatcher:
             remaining_time = end_time - time.time()
             if remaining_time + 1 > 1.0:
                 self.key_presser.press_key(shortcut)
-            time.sleep(0.1)
 
-    def log_skill_usage(self, icon_name, shortcut):
+    def log_skill_usage(self, icon_name, shortcut, score):
         """
         记录技能使用日志。
 
         参数：
         - icon_name：技能图标名称。
         - shortcut：技能快捷键。
+        - score：匹配得分。
         """
-        print(f"{time.strftime('%H:%M:%S')} 按下“{shortcut}” 使用“{icon_name}”", flush=True)
+        print(f"{time.strftime('%H:%M:%S')} 按下“{shortcut}” 使用“{icon_name}”，匹配得分 {score:.2f}", flush=True)
+        print("-----------------------", flush=True)
 
     def match_images(self):
         """
