@@ -1,8 +1,11 @@
 {
-    "Blessing_of_Kings": "3",
+    "Blessing_of_Kings": "6",
     "Blessing_of_Might": "1",
-    "Blessing_of_Salvation": "4",
-    "Blessing_of_Wisdom": "2",
+    "Blessing_of_Salvation": "7",
+    "Blessing_of_Wisdom": "4",
     "Add a new icon": "add icon",
-    "Lay_on_Hands": "5"
+    "Lay_on_Hands": "8",
+    "Divine_Favor": "3",
+    "Hammer_of_Justice": "2",
+    "Judgement": "5"
 }
