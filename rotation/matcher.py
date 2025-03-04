@@ -78,6 +78,7 @@ class ImageMatcher:
         active_window = gw.getActiveWindow()
         if active_window and "魔兽世界" in active_window.title:
             try:
+                time.sleep(0.2)
                 screenshot = ImageGrab.grab(bbox=self.region)
                 screenshot_np = np.array(screenshot)  # 这是 RGB 格式的图像
                 # 将图像从 RGB 转换为 BGR
