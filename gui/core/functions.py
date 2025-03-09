@@ -135,6 +135,7 @@ class Functions:
             if trinket_id:
                 results.append(fetch_icon(page, f'{base_url}/item={trinket_id}', trinket_id))
             if consumable_id:
+
                 results.append(fetch_icon(page, f'{base_url}/item={consumable_id}', consumable_id))
 
             browser.close()

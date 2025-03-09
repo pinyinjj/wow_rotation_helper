@@ -723,7 +723,7 @@ class Ui_ClassicClassPage(object):
             consumable_id = consumable_id_input.text().strip()
 
             # Process inputs if Skill ID is provided
-            if spell_id:
+            if spell_id or trinket_id or consumable_id:
                 try:
                     # Attempt to download the icon
                     status = Functions.download_icon(spell_id=spell_id,
@@ -745,7 +745,7 @@ class Ui_ClassicClassPage(object):
                 except Exception as e:
                     print(f"Error: An unexpected error occurred: {str(e)}")
             else:
-                print("Warning: Please enter a valid skill ID.")
+                print("Warning: Please enter a valid input.")
             print("Dialog was canceled.")  # Debug: Dialog canceled
 
     def create_add_icon_button(self):
