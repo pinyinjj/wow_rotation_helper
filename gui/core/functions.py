@@ -58,9 +58,6 @@ class Functions:
         gif = os.path.normpath(os.path.join(path, gif_name))
         return gif
 
-    import os
-    import requests
-    from playwright.sync_api import sync_playwright
 
     def download_icon(spell_id=None, trinket_id=None, consumable_id=None, class_name='', talent_name='',
                       game_version=''):
