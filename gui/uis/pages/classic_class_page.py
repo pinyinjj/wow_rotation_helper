@@ -4,7 +4,7 @@ import sys
 
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtCore import QSize
-from PySide6.QtGui import QIcon, Qt, QPixmap
+from PySide6.QtGui import QIcon, Qt, QPixmap, QFont
 from PySide6.QtWidgets import QPushButton, QGridLayout, QVBoxLayout, QLabel, QHBoxLayout, QWidget, \
     QMainWindow, QSizePolicy, QDialog, QMessageBox, QInputDialog, QLineEdit
 from gui.core.json_settings import Settings
@@ -684,17 +684,34 @@ class Ui_ClassicClassPage(object):
 
         # Create the dialog
         dialog = PyDialog()
+        main_width = self.main_window.width()
+        main_height = self.main_window.height()
+
+        # 设置弹窗为主窗口一半大小
+        dialog.resize(int(main_width * 0.2), int(main_height * 0.2))
+
+        # 根据主窗口宽度计算字体大小（你可以调整比例系数）
+        font_size = max(10, int(main_width * 0.01))  # 最小字体10pt，宽度越大字体越大
 
         # Access the dialog's layout and add input fields and buttons
         layout = dialog.layout()
 
         # Input fields for Skill ID, Trinket ID, and Consumable ID
         spell_id_label = QLabel("Spell ID:")
+        spell_id_label.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
         spell_id_input = QLineEdit()
+        spell_id_input.setStyleSheet(f"font-size: {font_size + 2}pt; font-weight: bold;")
+
         trinket_id_label = QLabel("Trinket ID:")
+        trinket_id_label.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
         trinket_id_input = QLineEdit()
+        trinket_id_input.setStyleSheet(f"font-size: {font_size + 2}pt;")
+
         consumable_id_label = QLabel("Consumable ID:")
+        consumable_id_label.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
         consumable_id_input = QLineEdit()
+        consumable_id_input.setStyleSheet(f"font-size: {font_size + 2}pt; font-weight: bold;")
+
 
         layout.addWidget(spell_id_label)
         layout.addWidget(spell_id_input)
