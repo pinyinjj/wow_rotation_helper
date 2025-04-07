@@ -241,7 +241,8 @@ class Ui_ClassPage(object):
                     config_file='rotation_config.yaml',
                     keybind_file=config_filepath,
                     class_name=self.selected_class_name,
-                    talent_name=self.selected_talent_name
+                    talent_name=self.selected_talent_name,
+                    game_version='retail'
                 )
                 self.rotation_thread.finished.connect(self.on_thread_finished)
 

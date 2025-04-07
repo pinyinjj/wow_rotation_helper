@@ -5,12 +5,12 @@ import time
 from PIL import ImageGrab
 import pygetwindow as gw
 from datetime import datetime
-
+from gui.core.json_settings import Settings
 from .key_presser import KeyPresser
 
 
 class ImageMatcher:
-    def __init__(self, icon_templates, key_mapping, config):
+    def __init__(self, icon_templates, key_mapping, config, version):
         """
         初始化图像匹配器。
 
@@ -24,6 +24,12 @@ class ImageMatcher:
         self.key_presser = KeyPresser(config)
         self.screenshot_delay = config['screenshot_delay']
 
+        self.settings = Settings()
+        if version == 'retail':
+            self.threshhold = self.settings.items.get("retail_threshold", 0.5)
+        elif version == 'classic':
+            self.threshhold = self.settings.items.get("classic_threshold", 0.3)
+        print(self.threshhold)
         region_config = config['region']
         self.last_match = None
         self.region = (
@@ -214,7 +220,7 @@ class ImageMatcher:
                     score -= 0.15
 
                 # 仅当匹配得分大于 0.5 时才进行按键操作
-                if score > 0.5:
+                if score > self.threshhold:
                     if isinstance(best_match, str):
                         if best_match in self.key_mapping:
                             self.process_skill_action(best_match, score)

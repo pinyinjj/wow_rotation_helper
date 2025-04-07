@@ -8,8 +8,8 @@ from .user_key_binding import UserKeyBindLoader
 
 
 class RotationHelper:
-    def __init__(self, class_name, talent_name, config_file='rotation_config.yaml', keybind_file='config.json'):
-
+    def __init__(self, class_name, talent_name, config_file='rotation_config.yaml', keybind_file='config.json', game_version='retail'):
+        self.game_version = game_version
         self.config_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), config_file)
         self.rotation_config = self._load_rotation_config(self.config_file_path)
 
@@ -17,10 +17,10 @@ class RotationHelper:
         self.binded_abilities = self.user_key_bind_loader.binded_abilities()
         self.key_mapping = self.user_key_bind_loader.get_skill_key_mapping()
 
-        self.icon_loader = SkillIconLoader(class_name, talent_name, self.binded_abilities, game_version="classic")
+        self.icon_loader = SkillIconLoader(class_name, talent_name, self.binded_abilities, game_version=self.game_version)
         self.images = self.icon_loader.get_images()
 
-        self.matcher = ImageMatcher(self.images, self.key_mapping, self.rotation_config)
+        self.matcher = ImageMatcher(self.images, self.key_mapping, self.rotation_config, self.game_version)
 
         self.is_running = True
 

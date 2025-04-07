@@ -244,7 +244,8 @@ class Ui_ClassicClassPage(object):
                     config_file='rotation_config.yaml',
                     keybind_file=config_filepath,
                     class_name=self.selected_class_name,
-                    talent_name=self.selected_talent_name
+                    talent_name=self.selected_talent_name,
+                    game_version='classic'
                 )
                 self.rotation_thread.finished.connect(self.on_thread_finished)
 

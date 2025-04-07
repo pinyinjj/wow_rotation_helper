@@ -4,9 +4,9 @@ from rotation import RotationHelper
 class RotationThread(QThread):
     finished = Signal()  # Signal emitted when the thread finishes
 
-    def __init__(self, config_file, keybind_file, class_name, talent_name):
+    def __init__(self, config_file, keybind_file, class_name, talent_name, game_version):
         super().__init__()
-        self.rotation_helper = RotationHelper(class_name, talent_name, config_file, keybind_file)
+        self.rotation_helper = RotationHelper(class_name, talent_name, config_file, keybind_file, game_version)
         self.is_running = True  # Control the running state
         self.mutex = QMutex()  # Thread lock
 
