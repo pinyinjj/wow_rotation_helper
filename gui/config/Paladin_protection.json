@@ -7,5 +7,13 @@
     "Add a new icon": "add icon",
     "Blessed_Hammer": "1",
     "Hammer_of_Wrath": "5",
-    "spell_holy_rebuke": "t"
+    "spell_holy_rebuke": "t",
+    "spell_holy_ardentdefender": "f1",
+    "inv_ability_paladin_divinetoll": "f2",
+    "inv_helmet_96": "f3",
+    "Avenging_Wrath": "7",
+    "Guardian_of_Ancient_Kings": "f5",
+    "Eye_of_Tyr": "f6",
+    "Lay_on_Hands": "f4",
+    "Bastion_of_Light": "8"
 }
