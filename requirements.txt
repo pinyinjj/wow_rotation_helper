@@ -8,4 +8,3 @@ PyAutoGUI
 opencv-python
 playwright
 requests
-python >= 3.10
