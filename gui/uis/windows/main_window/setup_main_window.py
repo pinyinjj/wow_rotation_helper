@@ -78,7 +78,7 @@ class SetupMainWindow:
         {
             "btn_icon": "classic_wow.svg",
             "btn_id": "btn_classic",
-            "btn_text": "Classic WOW",
+            "btn_text": "Classic Vanilla",
             "btn_tooltip": "Vanilla",
             "show_top": True,
             "is_active": False

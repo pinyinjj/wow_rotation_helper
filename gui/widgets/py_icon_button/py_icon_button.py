@@ -235,7 +235,7 @@ class _ToolTip(QLabel):
         padding-right: 10px;
         border-radius: 17px;
         border: 0px solid transparent;
-        font: 800 9pt "Segoe UI";
+        font: 800 16pt "Segoe UI";
     }}
     """
     def __init__(

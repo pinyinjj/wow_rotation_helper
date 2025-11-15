@@ -40,9 +40,14 @@ class ImageMatcher:
         )
         self.running = True
         self.manual_pause = False  # 手动暂停标志
+        self.match_callback = None  # Callback function for when icon is matched
         self.cast_time_skills = {
             '20241030222919': 4,
         }
+    
+    def set_match_callback(self, callback):
+        """Set callback function to be called when an icon is matched."""
+        self.match_callback = callback
 
     def is_cast_time_skill(self, key):
         """
@@ -247,6 +252,9 @@ class ImageMatcher:
         if self.last_match != best_match:
             self.log_skill_usage(best_match, shortcut, score)
             self.last_match = best_match
+            # Call callback to notify GUI about matched icon
+            if self.match_callback:
+                self.match_callback(best_match)
 
         if needs_cast_time:
             self.execute_skill_with_cast(shortcut, cast_time, best_match)

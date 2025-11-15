@@ -40,7 +40,7 @@ class PyWindow(QFrame):
         spacing = 2,
         bg_color = "#2c313c",
         text_color = "#fff",
-        text_font = "9pt 'Segoe UI'",
+        text_font = "16pt 'Segoe UI'",
         border_radius = 10,
         border_size = 2,
         border_color = "#343b48",

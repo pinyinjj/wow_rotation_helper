@@ -23,6 +23,7 @@ class RotationHelper:
         self.matcher = ImageMatcher(self.images, self.key_mapping, self.rotation_config, self.game_version)
 
         self.is_running = True
+        self.match_callback = None  # Callback function for when icon is matched
 
     def _load_rotation_config(self, config_file):
         default_set = {
@@ -54,6 +55,12 @@ class RotationHelper:
                 print(f"Error during execution: {e}")
                 break
 
+    def set_match_callback(self, callback):
+        """Set callback function to be called when an icon is matched."""
+        self.match_callback = callback
+        # Also set callback in matcher
+        self.matcher.set_match_callback(callback)
+    
     def stop(self):
         """Signal to stop the loop."""
         print("RH: Stopping RotationHelper.")

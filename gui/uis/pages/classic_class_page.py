@@ -2,11 +2,12 @@ import json
 import os
 import sys
 
-from PySide6.QtCore import QCoreApplication
-from PySide6.QtCore import QSize
-from PySide6.QtGui import QIcon, Qt, QPixmap, QFont
+from PySide6.QtCore import QCoreApplication, QPropertyAnimation, QEasingCurve, QRect
+from PySide6.QtCore import QSize, QThread, Signal
+from PySide6.QtGui import QIcon, Qt, QPixmap, QFont, QColor
 from PySide6.QtWidgets import QPushButton, QGridLayout, QVBoxLayout, QLabel, QHBoxLayout, QWidget, \
     QMainWindow, QSizePolicy, QDialog, QMessageBox, QInputDialog, QLineEdit
+from PySide6.QtWidgets import QGraphicsDropShadowEffect
 from gui.core.json_settings import Settings
 from gui.core.functions import Functions
 from gui.core.json_themes import Themes
@@ -14,6 +15,7 @@ from gui.widgets import PyGroupbox, PyPushButton, PyLoggerWindow
 from rotation import RotationThread
 from .key_binding import KeyBindDialog
 from ...widgets.py_dialog import PyDialog
+from ...widgets.py_add_icon_dialog import ModernAddIconDialog
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 gui_dir = os.path.join(current_dir, "..", "..")
@@ -33,6 +35,11 @@ class Ui_ClassicClassPage(object):
         self.config_data = {}  # 用于存储技能绑定
         self.config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "classic_config", "config.json")
         self.config_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "classic_config")
+        
+        # 用于存储图标widget的字典，key为图标名称，value为icon_widget
+        self.icon_widgets = {}  # 存储所有图标widget
+        self.current_highlighted_icon = None  # 当前高亮的图标名称
+        self.highlight_animations = {}  # 存储高亮动画
 
     def setupUi(self, page_skills):
 
@@ -46,12 +53,16 @@ class Ui_ClassicClassPage(object):
         # Class Group
         self.class_group = PyGroupbox("Class Selection", self.themes)
         self.class_layout = QGridLayout()
+        self.class_layout.setHorizontalSpacing(5)
+        self.class_layout.setVerticalSpacing(10)
         self.class_group.setLayout(self.class_layout)
         self.page_skills_layout.addWidget(self.class_group)
 
         # 创建 Talent Group
         self.talent_group = PyGroupbox("Talent Selection", self.themes)
         self.talent_layout = QGridLayout()
+        self.talent_layout.setHorizontalSpacing(2)
+        self.talent_layout.setVerticalSpacing(10)
         self.talent_group.setLayout(self.talent_layout)
         self.page_skills_layout.addWidget(self.talent_group)
         self.talent_group.setVisible(False)
@@ -59,6 +70,14 @@ class Ui_ClassicClassPage(object):
         # 创建 Talent Ability Group
         self.talent_ability = PyGroupbox("Talent Abilities", self.themes)
         self.talent_ability_layout = QGridLayout()
+        self.talent_ability_layout.setHorizontalSpacing(10)
+        self.talent_ability_layout.setVerticalSpacing(10)
+        # 设置列宽策略，防止列被压缩
+        # 每列最小宽度 = 图标宽度(64) + 按钮宽度(80) + 间距(5) = 149
+        min_column_width = 64 + 80 + 5
+        for i in range(6):  # 假设最多6列
+            self.talent_ability_layout.setColumnMinimumWidth(i, min_column_width)
+            self.talent_ability_layout.setColumnStretch(i, 0)  # 不拉伸，保持固定宽度
         self.talent_ability.setLayout(self.talent_ability_layout)
         self.page_skills_layout.addWidget(self.talent_ability)
         self.talent_ability.setVisible(False)
@@ -95,6 +114,7 @@ class Ui_ClassicClassPage(object):
             self.class_layout.addWidget(button, i // 6, i % 6)
 
         self.adjust_class_icon_spacing()
+        # self.adjust_main_window_size()  # 初始加载时调整窗口大小 - 已禁用自动调整窗口大小
 
         if self.debug:
             self.load_logger_frame()
@@ -248,6 +268,8 @@ class Ui_ClassicClassPage(object):
                     game_version='classic'
                 )
                 self.rotation_thread.finished.connect(self.on_thread_finished)
+                # Connect icon matched signal to highlight handler
+                self.rotation_thread.icon_matched.connect(self.on_icon_matched)
 
                 self.rotation_thread.start()  # Start the thread
                 print("RotationThread started.")
@@ -266,8 +288,8 @@ class Ui_ClassicClassPage(object):
             # Ensure the RotationThread is running before trying to stop it
             if self.rotation_thread and self.rotation_thread.isRunning():
                 self.rotation_thread.stop()  # Stop the RotationThread
-                self.rotation_thread.clean_up()  # Ensure cleanup of RotationHelper instance
                 self.rotation_thread.wait()  # Wait for the thread to finish
+                # clean_up() will be called in on_thread_finished() when finished signal is emitted
 
                 # Update button appearance after the thread has stopped
                 self.start_button.setText("Start")
@@ -329,6 +351,8 @@ class Ui_ClassicClassPage(object):
         icon_size = 64
         total_padding = window_width - (columns * icon_size)
         spacing = total_padding // (columns + 1) * spacing_factor
+        # 限制最大间距为5，确保class图标间距不会太大
+        spacing = min(spacing, 5)
         self.class_layout.setHorizontalSpacing(spacing)
 
     def create_class_button(self, icon_path, icon_size, class_name, on_click_callback):
@@ -364,7 +388,7 @@ class Ui_ClassicClassPage(object):
     def relayout_for_talent_display(self):
         self.class_layout.setVerticalSpacing(10)
         self.adjust_class_icon_spacing()
-        self.adjust_main_window_size()
+        # self.adjust_main_window_size()  # 已禁用自动调整窗口大小
 
     def on_talent_button_clicked(self, button, talent_name, class_name):
         print(f"Button clicked: {button}, Talent: {talent_name}, Class: {class_name}")
@@ -423,14 +447,15 @@ class Ui_ClassicClassPage(object):
         talent_dir = os.path.join(gui_dir, "uis", "icons", "classic", "talent_icons", class_name, talent_name.lower())
         self.load_abilities(self.talent_ability_layout, talent_dir)
         self.talent_ability.setVisible(True)
-        self.adjust_main_window_size()
+        # 根据abilities数量调整窗口高度
+        self.adjust_window_height_for_abilities()
 
     def relayout_for_ability_display(self):
         # 重新布局并显示技能组
         self.class_layout.setVerticalSpacing(10)
         self.talent_layout.setVerticalSpacing(10)
         self.adjust_class_icon_spacing()
-        self.adjust_main_window_size()
+        # self.adjust_main_window_size()  # 已禁用自动调整窗口大小
 
     def create_talent_button(self, icon_path, icon_size, talent_name, class_name):
         # Create the QPushButton
@@ -504,43 +529,228 @@ class Ui_ClassicClassPage(object):
         return abilities
 
     def adjust_main_window_size(self):
-        # 暂时禁用窗口更新
-        self.main_window.setUpdatesEnabled(False)
+        """动态调整窗口大小以容纳所有图标，确保无压缩"""
+        from PySide6.QtCore import QTimer
+        
+        # 使用QTimer延迟执行，确保布局已完成
+        def calculate_and_resize():
+            # 暂时禁用窗口更新
+            self.main_window.setUpdatesEnabled(False)
 
-        # 计算窗口大小逻辑
-        class_icon_rows = (self.class_layout.count() + 5) // 6
-        talent_icon_rows = (self.talent_layout.count() + 3) // 4
-        talent_ability_rows = (self.talent_ability_layout.count() + 5) // 4
+            # 定义常量
+            CLASS_COLUMNS = 6
+            TALENT_COLUMNS = 4
+            ABILITY_COLUMNS = 6
+            
+            CLASS_ICON_SIZE = 100  # 职业图标大小
+            TALENT_ICON_SIZE = 128  # 天赋图标大小
+            ABILITY_ICON_SIZE = 64  # 技能图标高度
+            ABILITY_BUTTON_WIDTH = 120  # 技能按钮宽度
+            ABILITY_BUTTON_HEIGHT = 64  # 技能按钮高度
+            ABILITY_WIDGET_WIDTH = ABILITY_ICON_SIZE + ABILITY_BUTTON_WIDTH + 5  # 图标+按钮+间距
+            ABILITY_WIDGET_HEIGHT = max(ABILITY_ICON_SIZE, ABILITY_BUTTON_HEIGHT)  # 取较大值
+            
+            HORIZONTAL_SPACING = 15
+            VERTICAL_SPACING = 15
+            GROUPBOX_HEADER_HEIGHT = 50  # Groupbox标题栏高度（增加以容纳标题和边框）
+            GROUPBOX_BORDER = 4  # Groupbox边框宽度
+            GROUPBOX_MARGIN = 15  # Groupbox内边距
+            BUTTON_BAR_HEIGHT = 70  # 按钮栏高度（增加缓冲）
+            PAGE_MARGIN = 10  # 页面边距（从main_pages.ui获取）
+            EXTRA_BUFFER = 40  # 额外缓冲空间，防止压缩
 
-        icon_size = 64
-        row_spacing = 10
+            # 计算每个section的行数
+            class_count = self.class_layout.count()
+            class_rows = (class_count + CLASS_COLUMNS - 1) // CLASS_COLUMNS if class_count > 0 else 0
+            
+            talent_count = self.talent_layout.count() if self.talent_group.isVisible() else 0
+            talent_rows = (talent_count + TALENT_COLUMNS - 1) // TALENT_COLUMNS if talent_count > 0 else 0
+            
+            ability_count = self.talent_ability_layout.count() if self.talent_ability.isVisible() else 0
+            ability_rows = (ability_count + ABILITY_COLUMNS - 1) // ABILITY_COLUMNS if ability_count > 0 else 0
 
-        total_height = (
-                (class_icon_rows + talent_icon_rows + talent_ability_rows)
-                * (icon_size + row_spacing)
-                + 200  # 额外缓冲空间
-        )
+            # 计算宽度 - 取所有可见section的最大宽度
+            widths = []
+            
+            if class_count > 0:
+                # 职业图标宽度：列数 * 图标大小 + (列数+1) * 间距 + Groupbox内边距
+                # 注意：6列需要7个间距（左右各一个，中间5个）
+                class_width = CLASS_COLUMNS * CLASS_ICON_SIZE + (CLASS_COLUMNS + 1) * HORIZONTAL_SPACING
+                class_width += GROUPBOX_MARGIN * 2 + GROUPBOX_BORDER * 2
+                # 增加额外的安全边距，确保所有图标可见
+                # 考虑中央widget边距(10px*2) + 其他可能的边距
+                class_width += 100  # 额外的安全边距，确保第6个图标完全可见
+                widths.append(class_width)
+                print(f"Class width calculation: {CLASS_COLUMNS} icons * {CLASS_ICON_SIZE}px = {CLASS_COLUMNS * CLASS_ICON_SIZE}px")
+                print(f"Spacing: {(CLASS_COLUMNS + 1)} * {HORIZONTAL_SPACING}px = {(CLASS_COLUMNS + 1) * HORIZONTAL_SPACING}px")
+                print(f"Groupbox margins: {GROUPBOX_MARGIN * 2}px, borders: {GROUPBOX_BORDER * 2}px")
+                print(f"Total class_width: {class_width}px")
+            
+            if talent_count > 0:
+                # 天赋图标宽度
+                talent_width = TALENT_COLUMNS * TALENT_ICON_SIZE + (TALENT_COLUMNS + 1) * HORIZONTAL_SPACING
+                talent_width += GROUPBOX_MARGIN * 2 + GROUPBOX_BORDER * 2
+                widths.append(talent_width)
+            
+            if ability_count > 0:
+                # 技能图标宽度：列数 * widget宽度 + (列数+1) * 间距 + Groupbox内边距
+                ability_width = ABILITY_COLUMNS * ABILITY_WIDGET_WIDTH + (ABILITY_COLUMNS + 1) * HORIZONTAL_SPACING
+                ability_width += GROUPBOX_MARGIN * 2 + GROUPBOX_BORDER * 2
+                widths.append(ability_width)
+            
+            # 如果没有可见内容，使用默认宽度
+            content_width = max(widths) if widths else 800
+            # 注意：PAGE_MARGIN已经在class_width计算中考虑了，这里不需要再加
+            # content_width += PAGE_MARGIN * 2  # 左右页面边距（已在class_width中考虑）
+            content_width += EXTRA_BUFFER  # 额外缓冲
+            content_width += 30  # 额外的右侧缓冲，确保最右侧图标完全可见
+            # 注意：class_width中已经包含了100px的额外缓冲，这里不需要再加太多
+            print(f"Content width before left menu: {content_width}px")
+            
+            # 获取左侧菜单宽度（如果存在）
+            left_menu_width = 0
+            try:
+                # 尝试获取左侧菜单框架的宽度
+                if hasattr(self.main_window, 'ui') and hasattr(self.main_window.ui, 'left_menu_frame'):
+                    left_menu_width = self.main_window.ui.left_menu_frame.width()
+                    if left_menu_width == 0:
+                        # 如果宽度为0，可能菜单被隐藏，使用settings中的最大值
+                        settings = Settings()
+                        left_menu_maximum = settings.items.get("lef_menu_size", {}).get("maximum", 240)
+                        left_menu_margin = settings.items.get("left_menu_content_margins", 3)
+                        left_menu_width = left_menu_maximum + (left_menu_margin * 2)
+                else:
+                    # 从settings获取默认值
+                    settings = Settings()
+                    left_menu_maximum = settings.items.get("lef_menu_size", {}).get("maximum", 240)
+                    left_menu_margin = settings.items.get("left_menu_content_margins", 3)
+                    left_menu_width = left_menu_maximum + (left_menu_margin * 2)
+            except Exception as e:
+                # 如果获取失败，使用默认值
+                settings = Settings()
+                left_menu_maximum = settings.items.get("lef_menu_size", {}).get("maximum", 240)
+                left_menu_margin = settings.items.get("left_menu_content_margins", 3)
+                left_menu_width = left_menu_maximum + (left_menu_margin * 2)
+            
+            # 总窗口宽度 = 左侧菜单宽度 + 内容区域宽度
+            total_width = left_menu_width + content_width
+            print(f"Left menu width: {left_menu_width}px")
+            print(f"Total window width: {total_width}px (left_menu: {left_menu_width}px + content: {content_width}px)")
+            
+            # 计算高度
+            total_height = PAGE_MARGIN * 2  # 上下页面边距
+            
+            if class_count > 0:
+                total_height += GROUPBOX_HEADER_HEIGHT  # Class Group标题
+                total_height += GROUPBOX_MARGIN * 2  # Groupbox上下内边距
+                total_height += GROUPBOX_BORDER * 2  # Groupbox上下边框
+                total_height += class_rows * CLASS_ICON_SIZE
+                if class_rows > 0:
+                    total_height += (class_rows + 1) * VERTICAL_SPACING
+            
+            if talent_count > 0:
+                total_height += GROUPBOX_HEADER_HEIGHT  # Talent Group标题
+                total_height += GROUPBOX_MARGIN * 2  # Groupbox上下内边距
+                total_height += GROUPBOX_BORDER * 2  # Groupbox上下边框
+                total_height += talent_rows * TALENT_ICON_SIZE
+                if talent_rows > 0:
+                    total_height += (talent_rows + 1) * VERTICAL_SPACING
+            
+            if ability_count > 0:
+                total_height += GROUPBOX_HEADER_HEIGHT  # Talent Ability Group标题
+                total_height += GROUPBOX_MARGIN * 2  # Groupbox上下内边距
+                total_height += GROUPBOX_BORDER * 2  # Groupbox上下边框
+                total_height += ability_rows * ABILITY_WIDGET_HEIGHT
+                if ability_rows > 0:
+                    total_height += (ability_rows + 1) * VERTICAL_SPACING
+            
+            # 按钮栏高度
+            total_height += BUTTON_BAR_HEIGHT
+            total_height += EXTRA_BUFFER  # 额外缓冲
+            
+            # 确保窗口足够大，不要设置最大尺寸限制
+            self.main_window.setMinimumSize(int(total_width), int(total_height))
+            self.main_window.setMaximumSize(16777215, 16777215)  # 移除最大尺寸限制
 
-        total_width_class = self.class_layout.count() * (icon_size + row_spacing) // 6
-        total_width_talent = self.talent_layout.count() * (icon_size + row_spacing) // 4
-        total_width_talent_ability = self.talent_ability_layout.count() * (icon_size + row_spacing) // 4
+            # 调整窗口大小
+            print(f"Resized window to: {int(total_width)} x {int(total_height)} (Class: {class_count}, Talent: {talent_count}, Ability: {ability_count})")
+            self.main_window.resize(int(total_width), int(total_height))
 
-        total_width = max(total_width_class, total_width_talent, total_width_talent_ability)
+            # 恢复窗口更新
+            self.main_window.setUpdatesEnabled(True)
+        
+        # 延迟执行以确保布局完成
+        QTimer.singleShot(100, calculate_and_resize)
 
-        max_width = 1200
-        max_height = 800
-
-        total_width = min(total_width, max_width)
-        total_height = min(total_height, max_height)
-
-        self.main_window.setMinimumSize(0, 0)
-
-        # 调整窗口大小
-        print(f"Resized window to: {int(total_width)} x {int(total_height)}")
-        self.main_window.resize(int(total_width), int(total_height))
-
-        # 恢复窗口更新
-        self.main_window.setUpdatesEnabled(True)
+    def adjust_window_height_for_abilities(self):
+        """根据talent abilities的数量调整窗口高度，确保所有图标完整显示"""
+        from PySide6.QtCore import QTimer
+        
+        def calculate_and_resize():
+            # 定义常量
+            ABILITY_COLUMNS = 6
+            ABILITY_WIDGET_HEIGHT = 64  # 技能widget高度
+            VERTICAL_SPACING = 10  # 垂直间距
+            GROUPBOX_HEADER_HEIGHT = 50  # Groupbox标题栏高度
+            GROUPBOX_MARGIN = 15  # Groupbox内边距
+            GROUPBOX_BORDER = 4  # Groupbox边框宽度
+            BUTTON_BAR_HEIGHT = 70  # 按钮栏高度
+            PAGE_MARGIN = 10  # 页面边距
+            EXTRA_BUFFER = 40  # 额外缓冲空间
+            
+            # 计算abilities的数量和行数
+            ability_count = self.talent_ability_layout.count() if self.talent_ability.isVisible() else 0
+            ability_rows = (ability_count + ABILITY_COLUMNS - 1) // ABILITY_COLUMNS if ability_count > 0 else 0
+            
+            # 获取当前窗口尺寸
+            current_width = self.main_window.width()
+            current_height = self.main_window.height()
+            
+            # 计算需要的高度
+            # 基础高度：标题栏 + 按钮栏 + 页面边距
+            base_height = 40 + BUTTON_BAR_HEIGHT + PAGE_MARGIN * 2  # 标题栏40 + 按钮栏70 + 页面边距
+            
+            # Class Selection部分高度（如果可见）
+            class_height = 0
+            if self.class_group.isVisible():
+                class_count = self.class_layout.count()
+                class_rows = (class_count + 6 - 1) // 6 if class_count > 0 else 0
+                class_height = GROUPBOX_HEADER_HEIGHT + GROUPBOX_MARGIN * 2 + GROUPBOX_BORDER * 2
+                if class_rows > 0:
+                    class_height += class_rows * 100  # CLASS_ICON_SIZE = 100
+                    class_height += (class_rows + 1) * VERTICAL_SPACING
+            
+            # Talent Selection部分高度（如果可见）
+            talent_height = 0
+            if self.talent_group.isVisible():
+                talent_count = self.talent_layout.count()
+                talent_rows = (talent_count + 4 - 1) // 4 if talent_count > 0 else 0
+                talent_height = GROUPBOX_HEADER_HEIGHT + GROUPBOX_MARGIN * 2 + GROUPBOX_BORDER * 2
+                if talent_rows > 0:
+                    talent_height += talent_rows * 128  # TALENT_ICON_SIZE = 128
+                    talent_height += (talent_rows + 1) * VERTICAL_SPACING
+            
+            # Talent Abilities部分高度
+            ability_height = 0
+            if ability_count > 0:
+                ability_height = GROUPBOX_HEADER_HEIGHT + GROUPBOX_MARGIN * 2 + GROUPBOX_BORDER * 2
+                if ability_rows > 0:
+                    ability_height += ability_rows * ABILITY_WIDGET_HEIGHT
+                    ability_height += (ability_rows + 1) * VERTICAL_SPACING
+            
+            # 计算总高度
+            total_height = base_height + class_height + talent_height + ability_height + EXTRA_BUFFER
+            
+            # 确保高度不小于当前高度（只增加，不减少）
+            if total_height > current_height:
+                print(f"调整窗口高度: {current_height} -> {int(total_height)} (abilities: {ability_count}, rows: {ability_rows})")
+                self.main_window.resize(current_width, int(total_height))
+                # 更新最小高度
+                min_width, min_height = self.main_window.minimumSize().width(), self.main_window.minimumSize().height()
+                self.main_window.setMinimumSize(min_width, int(total_height))
+        
+        # 延迟执行以确保布局完成
+        QTimer.singleShot(150, calculate_and_resize)
 
     def get_button_style(self, selected):
         if selected:
@@ -569,11 +779,18 @@ class Ui_ClassicClassPage(object):
     def load_abilities(self, layout, directory, columns=6):
         """加载技能并创建按钮绑定"""
 
-        # Clear existing items in the layout
+        # Clear existing items in the layout and icon widgets dict
         for i in reversed(range(layout.count())):
             widget = layout.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
+        
+        # Clear icon widgets dictionary and remove any highlights
+        for icon_name in list(self.icon_widgets.keys()):
+            if icon_name in self.highlight_animations:
+                self.remove_highlight(icon_name)
+        self.icon_widgets.clear()
+        self.current_highlighted_icon = None
 
         # Load abilities from the specified directory
         abilities = self.load_abilities_from_directory(directory)
@@ -609,6 +826,9 @@ class Ui_ClassicClassPage(object):
 
             # Create icon widget for each ability
             icon_widget = create_icon_widget(icon_path, ability_name)
+            
+            # Store icon widget in dictionary for highlighting
+            self.icon_widgets[ability_name] = icon_widget
 
             # Create binding button
             binding_button = self.create_binding_button(ability_name)
@@ -629,6 +849,10 @@ class Ui_ClassicClassPage(object):
             # Wrap ability layout in a widget
             ability_widget = QWidget()
             ability_widget.setLayout(ability_layout)
+            # 设置固定尺寸策略，防止被压缩
+            ability_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            # 设置最小尺寸，确保图标和按钮有足够空间
+            ability_widget.setMinimumSize(64 + 80 + 5, 64)  # 图标宽度 + 按钮宽度 + 间距
 
             layout.addWidget(ability_widget, row, col)
 
@@ -681,90 +905,24 @@ class Ui_ClassicClassPage(object):
         return add_icon_ability_widget
 
     def show_add_icon_dialog(self):
-        """Displays a custom dialog with fields for entering IDs."""
-
-        # Create the dialog
-        dialog = PyDialog()
-        main_width = self.main_window.width()
-        main_height = self.main_window.height()
-
-        # 设置弹窗为主窗口一半大小
-        dialog.resize(int(main_width * 0.2), int(main_height * 0.2))
-
-        # 根据主窗口宽度计算字体大小（你可以调整比例系数）
-        font_size = max(10, int(main_width * 0.01))  # 最小字体10pt，宽度越大字体越大
-
-        # Access the dialog's layout and add input fields and buttons
-        layout = dialog.layout()
-
-        # Input fields for Skill ID, Trinket ID, and Consumable ID
-        spell_id_label = QLabel("Spell ID:")
-        spell_id_label.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
-        spell_id_input = QLineEdit()
-        spell_id_input.setStyleSheet(f"font-size: {font_size + 2}pt; font-weight: bold;")
-
-        trinket_id_label = QLabel("Trinket ID:")
-        trinket_id_label.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
-        trinket_id_input = QLineEdit()
-        trinket_id_input.setStyleSheet(f"font-size: {font_size + 2}pt;")
-
-        consumable_id_label = QLabel("Consumable ID:")
-        consumable_id_label.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
-        consumable_id_input = QLineEdit()
-        consumable_id_input.setStyleSheet(f"font-size: {font_size + 2}pt; font-weight: bold;")
-
-
-        layout.addWidget(spell_id_label)
-        layout.addWidget(spell_id_input)
-        layout.addWidget(trinket_id_label)
-        layout.addWidget(trinket_id_input)
-        layout.addWidget(consumable_id_label)
-        layout.addWidget(consumable_id_input)
-
-        # Buttons for OK and Cancel
-        button_layout = QHBoxLayout()
-        ok_button = QPushButton("OK")
-        cancel_button = QPushButton("Cancel")
-
-        button_layout.addWidget(ok_button)
-        button_layout.addWidget(cancel_button)
-        layout.addLayout(button_layout)
-
-        # Connect buttons to handle dialog response
-        ok_button.clicked.connect(dialog.accept)
-        cancel_button.clicked.connect(dialog.reject)
-
-        # Display dialog and handle accepted action
-        if dialog.exec() == QDialog.Accepted:
-            spell_id = spell_id_input.text().strip()
-            trinket_id = trinket_id_input.text().strip()
-            consumable_id = consumable_id_input.text().strip()
-
-            # Process inputs if Skill ID is provided
-            if spell_id or trinket_id or consumable_id:
-                try:
-                    # Attempt to download the icon
-                    status = Functions.download_icon(spell_id=spell_id,
-                                                     trinket_id=trinket_id,
-                                                     consumable_id=consumable_id,
-                                                     class_name=self.selected_class_name,
-                                                     talent_name=self.selected_talent_name,
-                                                     game_version='classic')
-                    if status == 1:
-                        print(f"Icon downloaded successfully.")
-                        self.reload_icons()
-                    else:
-                        error_message = {
-                            -1: "Failed to download icon: HTTP or connection issue.",
-                            -2: f"Failed to save the icon for '{spell_id}'.",
-                            -3: f"Icon link not found for '{spell_id}'.",
-                        }.get(status, "An unknown error occurred.")
-                        print(f"Error: {error_message}")
-                except Exception as e:
-                    print(f"Error: An unexpected error occurred: {str(e)}")
-            else:
-                print("Warning: Please enter a valid input.")
-            print("Dialog was canceled.")  # Debug: Dialog canceled
+        """Displays a modern dialog for adding icons."""
+        # Create modern dialog with main_window as parent
+        dialog = ModernAddIconDialog(parent=self.main_window, themes=self.themes)
+        
+        # Set page instance reference for accessing selected_class_name and selected_talent_name
+        dialog.page_instance = self
+        
+        # Set reload callback
+        dialog.reload_icons = self.reload_icons
+        
+        # Center dialog on main window
+        dialog.move(
+            self.main_window.x() + (self.main_window.width() - 520) // 2,
+            self.main_window.y() + (self.main_window.height() - 460) // 2
+        )
+        
+        # Show dialog
+        dialog.exec()
 
     def create_add_icon_button(self):
         """Creates a custom 'Add Icon' button that opens the add icon dialog on click."""
@@ -781,7 +939,7 @@ class Ui_ClassicClassPage(object):
         )
 
         add_icon_button.setFixedHeight(64)
-        add_icon_button.setFixedWidth(120)
+        add_icon_button.setFixedWidth(80)
         add_icon_button.setToolTip("Add a new icon")
 
         # Connect button click to open the dialog
@@ -803,8 +961,11 @@ class Ui_ClassicClassPage(object):
         )
 
         button.setFixedHeight(64)
-        button.setFixedWidth(120)
+        button.setFixedWidth(80)
         button.setToolTip(ability_name)
+        # 设置文本居中对齐
+        current_style = button.styleSheet()
+        button.setStyleSheet(current_style + "text-align: center; padding-left: 0px; padding-right: 0px;")
 
         def on_button_clicked():
             """点击按钮后打开按键绑定对话框"""
@@ -820,6 +981,74 @@ class Ui_ClassicClassPage(object):
         button.clicked.connect(on_button_clicked)
 
         return button
+
+    def on_icon_matched(self, icon_name):
+        """Handle icon matched signal - highlight the matched icon"""
+        if icon_name in self.icon_widgets:
+            # Remove highlight from previous icon
+            if self.current_highlighted_icon and self.current_highlighted_icon != icon_name:
+                self.remove_highlight(self.current_highlighted_icon)
+            
+            # Highlight the new icon
+            if self.current_highlighted_icon != icon_name:
+                self.highlight_icon(icon_name)
+                self.current_highlighted_icon = icon_name
+    
+    def highlight_icon(self, icon_name):
+        """Add modern flash highlight effect to an icon"""
+        if icon_name not in self.icon_widgets:
+            return
+        
+        icon_widget = self.icon_widgets[icon_name]
+        
+        # Remove any existing highlight animation
+        if icon_name in self.highlight_animations:
+            self.remove_highlight(icon_name)
+        
+        # Create glow shadow effect with bright cyan color
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(20)
+        shadow_effect.setColor(QColor(0, 255, 255, 255))  # Bright cyan glow
+        shadow_effect.setOffset(0, 0)
+        icon_widget.setGraphicsEffect(shadow_effect)
+        
+        # Create pulsing animation for the glow (blur radius animation)
+        animation = QPropertyAnimation(shadow_effect, b"blurRadius")
+        animation.setDuration(800)  # 0.8 second cycle for smooth pulse
+        animation.setStartValue(15)
+        animation.setEndValue(35)
+        animation.setEasingCurve(QEasingCurve.InOutSine)
+        animation.setLoopCount(-1)  # Infinite loop
+        
+        # Store animations
+        self.highlight_animations[icon_name] = {
+            'shadow': shadow_effect,
+            'blur_animation': animation
+        }
+        
+        # Start animation
+        animation.start()
+    
+    def remove_highlight(self, icon_name):
+        """Remove highlight effect from an icon"""
+        if icon_name not in self.highlight_animations:
+            return
+        
+        animations = self.highlight_animations[icon_name]
+        
+        # Stop animations
+        if 'blur_animation' in animations:
+            animations['blur_animation'].stop()
+        
+        # Remove graphics effect
+        if icon_name in self.icon_widgets:
+            self.icon_widgets[icon_name].setGraphicsEffect(None)
+        
+        # Remove from animations dict
+        del self.highlight_animations[icon_name]
+        
+        if self.current_highlighted_icon == icon_name:
+            self.current_highlighted_icon = None
 
     def retranslateUi(self, page_class):
         page_class.setWindowTitle(QCoreApplication.translate("ClassPage", "Class Page", None))

@@ -45,7 +45,7 @@ class PyDialog(QDialog):
         """Generate stylesheet using theme settings"""
         bg_color = self.theme.get('bg_color', '#2c313c')
         text_color = self.theme.get('text_color', '#fff')
-        text_font = self.theme.get('text_font', "9pt 'Segoe UI'")
+        text_font = self.theme.get('text_font', "16pt 'Segoe UI'")
         border_radius = self.theme.get('border_radius', 10)
         border_size = self.theme.get('border_size', 2)
         border_color = self.theme.get('border_color', '#343b48')

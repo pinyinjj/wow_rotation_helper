@@ -158,7 +158,7 @@
           </font>
          </property>
          <property name="styleSheet">
-          <string notr="true">font-size: 16pt</string>
+          <string notr="true">font-size: 24pt</string>
          </property>
          <property name="text">
           <string>Menu 1 - Left Menu</string>
@@ -228,7 +228,7 @@
           </font>
          </property>
          <property name="styleSheet">
-          <string notr="true">font-size: 16pt</string>
+          <string notr="true">font-size: 24pt</string>
          </property>
          <property name="text">
           <string>Menu 2 - Left Menu</string>
@@ -246,7 +246,7 @@
           </font>
          </property>
          <property name="styleSheet">
-          <string notr="true">font-size: 9pt</string>
+          <string notr="true">font-size: 16pt</string>
          </property>
          <property name="text">
           <string>This is just an example menu.

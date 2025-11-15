@@ -59,7 +59,7 @@
           </font>
          </property>
          <property name="styleSheet">
-          <string notr="true">font-size: 16pt</string>
+          <string notr="true">font-size: 24pt</string>
          </property>
          <property name="text">
           <string>Menu 1 - Right Menu</string>
@@ -96,7 +96,7 @@
           </font>
          </property>
          <property name="styleSheet">
-          <string notr="true">font-size: 16pt</string>
+          <string notr="true">font-size: 24pt</string>
          </property>
          <property name="text">
           <string>Menu 2 - Right Menu</string>

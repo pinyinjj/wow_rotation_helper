@@ -27,7 +27,7 @@ class Ui_MainPages(object):
         # Page 1
         self.page_1 = QWidget()
         self.page_1.setObjectName(u"page_1")
-        self.page_1.setStyleSheet(u"font-size: 14pt")
+        self.page_1.setStyleSheet(u"font-size: 22pt")
         self.page_1_layout = QVBoxLayout(self.page_1)
         self.page_1_layout.setSpacing(5)
         self.page_1_layout.setObjectName(u"page_1_layout")
@@ -91,9 +91,9 @@ class Ui_MainPages(object):
         self.title_label.setObjectName(u"title_label")
         self.title_label.setMaximumSize(QSize(16777215, 40))
         font = QFont()
-        font.setPointSize(16)
+        font.setPointSize(24)
         self.title_label.setFont(font)
-        self.title_label.setStyleSheet(u"font-size: 16pt")
+        self.title_label.setStyleSheet(u"font-size: 24pt")
         self.title_label.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout.addWidget(self.title_label)
@@ -140,7 +140,7 @@ class Ui_MainPages(object):
         self.page_3 = QWidget()
         self.page_3.setObjectName(u"page_3")
         self.page_3.setStyleSheet(u"QFrame {\n"
-                                  "	font-size: 16pt;\n"
+                                  "	font-size: 24pt;\n"
                                   "}")
         self.page_3_layout = QVBoxLayout(self.page_3)
         self.page_3_layout.setObjectName(u"page_3_layout")

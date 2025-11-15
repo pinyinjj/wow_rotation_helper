@@ -15,19 +15,19 @@
   </property>
   <layout class="QVBoxLayout" name="main_pages_layout">
    <property name="spacing">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="leftMargin">
-    <number>5</number>
+    <number>10</number>
    </property>
    <property name="topMargin">
-    <number>5</number>
+    <number>10</number>
    </property>
    <property name="rightMargin">
-    <number>5</number>
+    <number>10</number>
    </property>
    <property name="bottomMargin">
-    <number>5</number>
+    <number>10</number>
    </property>
    <item>
     <widget class="QStackedWidget" name="pages">
@@ -36,23 +36,23 @@
      </property>
      <widget class="QWidget" name="page_1">
       <property name="styleSheet">
-       <string notr="true">font-size: 14pt</string>
+       <string notr="true">font-size: 22pt</string>
       </property>
       <layout class="QVBoxLayout" name="page_1_layout">
        <property name="spacing">
-        <number>5</number>
+        <number>10</number>
        </property>
        <property name="leftMargin">
-        <number>5</number>
+        <number>10</number>
        </property>
        <property name="topMargin">
-        <number>5</number>
+        <number>10</number>
        </property>
        <property name="rightMargin">
-        <number>5</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
-        <number>5</number>
+        <number>10</number>
        </property>
        <item alignment="Qt::AlignmentFlag::AlignHCenter">
         <widget class="QFrame" name="welcome_base">
@@ -147,19 +147,19 @@
      <widget class="QWidget" name="page_2">
       <layout class="QVBoxLayout" name="page_2_layout">
        <property name="spacing">
-        <number>5</number>
+        <number>10</number>
        </property>
        <property name="leftMargin">
-        <number>5</number>
+        <number>10</number>
        </property>
        <property name="topMargin">
-        <number>5</number>
+        <number>10</number>
        </property>
        <property name="rightMargin">
-        <number>5</number>
+        <number>10</number>
        </property>
        <property name="bottomMargin">
-        <number>5</number>
+        <number>10</number>
        </property>
        <item>
         <widget class="QScrollArea" name="scroll_area">
@@ -192,19 +192,19 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout">
            <property name="spacing">
-            <number>15</number>
+            <number>20</number>
            </property>
            <property name="leftMargin">
-            <number>5</number>
+            <number>10</number>
            </property>
            <property name="topMargin">
-            <number>5</number>
+            <number>10</number>
            </property>
            <property name="rightMargin">
-            <number>5</number>
+            <number>10</number>
            </property>
            <property name="bottomMargin">
-            <number>5</number>
+            <number>10</number>
            </property>
            <item>
             <widget class="QLabel" name="title_label">
@@ -220,7 +220,7 @@
               </font>
              </property>
              <property name="styleSheet">
-              <string notr="true">font-size: 16pt</string>
+              <string notr="true">font-size: 24pt</string>
              </property>
              <property name="text">
               <string>Custom Widgets Page</string>
@@ -268,7 +268,7 @@ I will try to always record a new tutorial when adding a new Widget and updating
      <widget class="QWidget" name="page_3">
       <property name="styleSheet">
        <string notr="true">QFrame {
-	font-size: 16pt;
+	font-size: 24pt;
 }</string>
       </property>
       <layout class="QVBoxLayout" name="page_3_layout">

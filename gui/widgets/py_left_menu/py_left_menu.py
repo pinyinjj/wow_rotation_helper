@@ -122,6 +122,19 @@ class PyLeftMenu(QWidget):
         self.div_bottom = PyDiv(dark_four)
         self.div_bottom.hide()
         self.bottom_layout.addWidget(self.div_bottom)
+        
+        # SET MENU TO EXPANDED STATE BY DEFAULT
+        # Set parent frame to maximum width and update toggle button state
+        # ///////////////////////////////////////////////////////////////
+        if self._parent:
+            self._parent.setMinimumWidth(self._maximum_width)
+            self._parent.setMaximumWidth(self._maximum_width)
+            self.toggle_button.set_active_toggle(True)
+            self.toggle_button.set_icon(self._icon_path_close)
+        
+        # DISABLE TOGGLE BUTTON TO PREVENT CLOSING
+        # ///////////////////////////////////////////////////////////////
+        self.toggle_button.setEnabled(False)
 
     # ADD BUTTONS TO LEFT MENU
     # Add btns and emit signals
@@ -176,22 +189,9 @@ class PyLeftMenu(QWidget):
     # EXPAND / RETRACT LEF MENU
     # ///////////////////////////////////////////////////////////////
     def toggle_animation(self):
-        # CREATE ANIMATION
-        self.animation = QPropertyAnimation(self._parent, b"minimumWidth")
-        self.animation.stop()
-        if self.width() == self._minimum_width:
-            self.animation.setStartValue(self.width())
-            self.animation.setEndValue(self._maximum_width)
-            self.toggle_button.set_active_toggle(True)
-            self.toggle_button.set_icon(self._icon_path_close)
-        else:
-            self.animation.setStartValue(self.width())
-            self.animation.setEndValue(self._minimum_width)
-            self.toggle_button.set_active_toggle(False)
-            self.toggle_button.set_icon(self._icon_path)
-        self.animation.setEasingCurve(QEasingCurve.InOutCubic)
-        self.animation.setDuration(self._duration_time)
-        self.animation.start()
+        # DISABLED: Menu is always expanded and cannot be closed
+        # This function is kept for compatibility but does nothing
+        pass
 
     # SELECT ONLY ONE BTN
     # ///////////////////////////////////////////////////////////////

@@ -84,9 +84,9 @@ class UI_MainWindow(object):
         ''')
         self.central_widget_layout = QVBoxLayout(self.central_widget)
         if self.settings["custom_title_bar"]:
-            self.central_widget_layout.setContentsMargins(10,10,10,10)
+            self.central_widget_layout.setContentsMargins(12,12,12,12)
         else:
-            self.central_widget_layout.setContentsMargins(0,0,0,0)
+            self.central_widget_layout.setContentsMargins(5,5,5,5)
         
         # LOAD PY WINDOW CUSTOM WIDGET
         # Add inside PyWindow "layout" all Widgets
@@ -110,17 +110,19 @@ class UI_MainWindow(object):
         # ///////////////////////////////////////////////////////////////
         left_menu_margin = self.settings["left_menu_content_margins"]
         left_menu_minimum = self.settings["lef_menu_size"]["minimum"]
+        left_menu_maximum = self.settings["lef_menu_size"]["maximum"]
         self.left_menu_frame = QFrame()
-        self.left_menu_frame.setMaximumSize(left_menu_minimum + (left_menu_margin * 2), 17280)
-        self.left_menu_frame.setMinimumSize(left_menu_minimum + (left_menu_margin * 2), 0)
+        # Set to maximum width by default (menu always expanded)
+        self.left_menu_frame.setMaximumSize(left_menu_maximum + (left_menu_margin * 2), 17280)
+        self.left_menu_frame.setMinimumSize(left_menu_maximum + (left_menu_margin * 2), 0)
 
         # LEFT MENU LAYOUT
         self.left_menu_layout = QHBoxLayout(self.left_menu_frame)
         self.left_menu_layout.setContentsMargins(
-            left_menu_margin,
-            left_menu_margin,
-            left_menu_margin,
-            left_menu_margin
+            left_menu_margin + 2,
+            left_menu_margin + 2,
+            left_menu_margin + 2,
+            left_menu_margin + 2
         )
 
         # ADD LEFT MENU
@@ -153,7 +155,7 @@ class UI_MainWindow(object):
 
         # ADD LAYOUT TO LEFT COLUMN
         self.left_column_layout = QVBoxLayout(self.left_column_frame)
-        self.left_column_layout.setContentsMargins(0,0,0,0)
+        self.left_column_layout.setContentsMargins(5,5,5,5)
 
         # ADD CUSTOM LEFT MENU WIDGET
         self.left_column = PyLeftColumn(
@@ -183,8 +185,8 @@ class UI_MainWindow(object):
 
         # ADD RIGHT APP LAYOUT
         self.right_app_layout = QVBoxLayout(self.right_app_frame)
-        self.right_app_layout.setContentsMargins(3,3,3,3)
-        self.right_app_layout.setSpacing(6)
+        self.right_app_layout.setContentsMargins(8,8,8,8)
+        self.right_app_layout.setSpacing(10)
 
         # ADD TITLE BAR FRAME
         # ///////////////////////////////////////////////////////////////
@@ -225,8 +227,8 @@ class UI_MainWindow(object):
 
         # CREATE LAYOUT
         self.content_area_layout = QHBoxLayout(self.content_area_frame)
-        self.content_area_layout.setContentsMargins(0,0,0,0)
-        self.content_area_layout.setSpacing(0)
+        self.content_area_layout.setContentsMargins(5,5,5,5)
+        self.content_area_layout.setSpacing(5)
 
         # LEFT CONTENT
         self.content_area_left_frame = QFrame()
@@ -243,8 +245,8 @@ class UI_MainWindow(object):
         # IMPORT RIGHT COLUMN
         # ///////////////////////////////////////////////////////////////
         self.content_area_right_layout = QVBoxLayout(self.right_column_frame)
-        self.content_area_right_layout.setContentsMargins(5,5,5,5)
-        self.content_area_right_layout.setSpacing(0)
+        self.content_area_right_layout.setContentsMargins(8,8,8,8)
+        self.content_area_right_layout.setSpacing(5)
 
         # RIGHT BG
         self.content_area_right_bg_frame = QFrame()

@@ -8,12 +8,12 @@
     "classic_threshold" : 0.5,
     "custom_title_bar": true,
     "startup_size": [
-        1400,
-        720
+        1600,
+        900
     ],
     "minimum_size": [
-        960,
-        540
+        1200,
+        700
     ],
     "lef_menu_size" : {
         "minimum" : 50,
@@ -31,8 +31,8 @@
     "time_animation" : 500,
     "font" : {
         "family" : "Segoe UI",
-        "title_size" : 10,
-        "text_size" : 9
+        "title_size" : 18,
+        "text_size" : 16
     },
     "debug": "False"
 }
