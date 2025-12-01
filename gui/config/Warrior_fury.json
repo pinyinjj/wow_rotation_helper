@@ -8,10 +8,16 @@
     "Raging_Blow": "f1",
     "Slam": "5",
     "Whirlwind": "2",
-    "Add a new icon": "add icon",
+    "Add a new icon": "add",
     "Charge": "f",
     "Rampage": "f5",
     "Enraged_Regeneration": "f3",
     "Recklessness": "f4",
-    "Shockwave": "f6"
+    "Shockwave": "f6",
+    "Bitter_Immunity": "0",
+    "Avatar": "-",
+    "Bladestorm": "=",
+    "Onslaught": "f7",
+    "Odyn_s_Fury": "6",
+    "Thunderous_Roar": "5"
 }

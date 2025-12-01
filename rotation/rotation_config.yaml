@@ -1,11 +1,14 @@
 delay:
   max: 0.16
   min: 0.069
+hdr_darkness: 1.07
 pressed_start: '`'
 region:
-  x1: 3
-  x2: 102
-  y1: 41
-  y2: 138
+  x1: 1
+  x2: 167
+  y1: 0
+  y2: 176
 screenshot_delay: 0.3
+template_scale_classic: 2.0
 wow_directory: C:/Program Files (x86)/World of Warcraft/
+zoom: 2.0

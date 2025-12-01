@@ -78,50 +78,10 @@ class SetupMainWindow:
         {
             "btn_icon": "classic_wow.svg",
             "btn_id": "btn_classic",
-            "btn_text": "Classic Vanilla",
+            "btn_text": "Classic",
             "btn_tooltip": "Vanilla",
             "show_top": True,
             "is_active": False
-        },
-        {
-            "btn_icon": "capture.svg",
-            "btn_id": "btn_capture",
-            "btn_text": "Capture Area",
-            "btn_tooltip": "Capture Area",
-            "show_top": True,
-            "is_active": False
-        },
-        {
-            "btn_icon" : "icon_widgets.svg",
-            "btn_id" : "btn_widgets",
-            "btn_text" : "text",
-            "btn_tooltip" : "text",
-            "show_top" : True,
-            "is_active" : False
-        },
-        {
-            "btn_icon" : "icon_file.svg",
-            "btn_id" : "btn_new_file",
-            "btn_text" : "New File",
-            "btn_tooltip" : "Create new file",
-            "show_top" : True,
-            "is_active" : False
-        },
-        {
-            "btn_icon" : "icon_folder_open.svg",
-            "btn_id" : "btn_open_file",
-            "btn_text" : "Open File",
-            "btn_tooltip" : "Open file",
-            "show_top" : True,
-            "is_active" : False
-        },
-        {
-            "btn_icon" : "icon_save.svg",
-            "btn_id" : "btn_save",
-            "btn_text" : "Save File",
-            "btn_tooltip" : "Save file",
-            "show_top" : True,
-            "is_active" : False
         },
         {
             "btn_icon" : "icon_info.svg",

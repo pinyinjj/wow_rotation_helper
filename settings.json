@@ -3,7 +3,8 @@
     "version" : "v1.0.0",
     "copyright" : "By: Wanderson M. Pimenta",
     "year" : 2021,
-    "theme_name" : "default",
+    
+    "theme_name" : "bright_theme",
     "retail_threshold" : 0.3,
     "classic_threshold" : 0.5,
     "custom_title_bar": true,

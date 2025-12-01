@@ -17,6 +17,11 @@ class RotationThread(QThread):
         """Callback function to emit signal when icon is matched"""
         self.icon_matched.emit(icon_name)
 
+    def set_mode(self, mode: str):
+        """Proxy to change RotationHelper mode at runtime."""
+        if self.rotation_helper:
+            self.rotation_helper.set_mode(mode)
+
     def run(self):
         print("RotationThread started.")
         try:
