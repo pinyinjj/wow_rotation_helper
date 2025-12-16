@@ -7,7 +7,6 @@ from PySide6.QtCore import Qt
 # IMPORT SKILL PAGE
 from .class_page import Ui_ClassPage
 from .classic_class_page import Ui_ClassicClassPage
-from .capture_page import Ui_CapturePage
 
 class Ui_MainPages(object):
     def __init__(self, main_window):
@@ -169,11 +168,6 @@ class Ui_MainPages(object):
         self.pages.setFocusPolicy(Qt.ClickFocus)
         self.main_pages_layout.addWidget(self.pages)
 
-        # Class Capture
-        self.page_capture = QWidget()
-        self.ui_capture_page = Ui_CapturePage(self.main_window)
-        self.ui_capture_page.setupUi(self.page_capture)
-        self.pages.addWidget(self.page_capture)
         self.pages.currentChanged.connect(self.on_page_changed)
 
         self.pages.setFocusPolicy(Qt.ClickFocus)
@@ -187,11 +181,8 @@ class Ui_MainPages(object):
     # setupUi
 
     def on_page_changed(self, index):
-        """Ensure focus is set on CaptureWidget when the capture page is shown."""
-        # Assuming the Capture Page is the last page, adjust index if it's not
-        if index == self.pages.indexOf(self.page_capture):
-            # Ensure the capture widget receives focus
-            self.ui_capture_page.setFocus()
+        """Handle page changes."""
+        pass
 
 
     def retranslateUi(self, MainPages):

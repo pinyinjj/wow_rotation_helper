@@ -11,7 +11,7 @@ from .template_matcher import TemplateMatcher
 
 
 class ImageMatcher:
-    def __init__(self, icon_templates, key_mapping, config, version):
+    def __init__(self, icon_templates, key_mapping, config, version, threshold_mapping=None):
         """
         初始化图像匹配器。
 
@@ -19,10 +19,13 @@ class ImageMatcher:
         - icon_templates：图标模板字典。
         - key_mapping：按键映射字典。
         - config：配置参数。
+        - version：游戏版本。
+        - threshold_mapping：技能阈值映射字典（可选）。
         """
         # 原始图标模板：name -> 图像
         self.icon_templates = icon_templates
         self.key_mapping = key_mapping
+        self.threshold_mapping = threshold_mapping or {}  # 技能阈值映射字典
         self.key_presser = KeyPresser(config)
         self.screenshot_delay = config['screenshot_delay']
 
@@ -183,7 +186,6 @@ class ImageMatcher:
                 return None
         else:
             time.sleep(1)
-            print("窗口未激活，不截图", flush=True)
             return None
 
     def show_comparison(self, screenshot_color, template_color, template_name, match_value, top_left):
@@ -240,24 +242,16 @@ class ImageMatcher:
             if match_result is not None:
                 best_match, score = match_result
 
-                # 调试输出：无论是否超过阈值，都打印当前最佳匹配及得分
-                try:
-                    print(
-                        f"[DEBUG] 最佳匹配: {best_match}, 得分: {score:.3f}, 当前阈值: {self.threshhold:.3f}",
-                        flush=True,
-                    )
-                except Exception:
-                    pass
-
                 # 当技能名称为 Battle_Shout 时，减少分值 0.15 以防止识别错误
                 if best_match == "Battle_Shout":
                     score -= 0.15
 
-                # 针对部分技能使用更宽松的阈值（例如某些增益类技能图标对比度较低）
-                # Tiger_s_Fury / Mark_of_the_Wild / Swipe__Cat_ 使用 0.4 阈值，其它技能使用默认阈值
+                # 获取有效阈值：优先使用配置中的阈值，否则使用默认阈值
                 effective_threshold = self.threshhold
-                if isinstance(best_match, str) and best_match in ("Tiger_s_Fury", "Mark_of_the_Wild", "Swipe__Cat_"):
-                    effective_threshold = 0.4
+                if isinstance(best_match, str):
+                    # 检查配置文件中是否有该技能的阈值设置
+                    if self.threshold_mapping and best_match in self.threshold_mapping:
+                        effective_threshold = self.threshold_mapping[best_match]
 
                 # 达到对应阈值才执行后续逻辑，否则只打印调试信息
                 if score > effective_threshold:
@@ -277,11 +271,10 @@ class ImageMatcher:
                     else:
                         print("[DEBUG] 最佳匹配不是字符串，跳过输入。", flush=True)
                 else:
-                    print("[DEBUG] 得分未达到阈值，不执行按键。", flush=True)
+                    # 得分未达到阈值，不执行按键（已禁用调试输出）
+                    pass
             else:
                 print("[DEBUG] 未找到匹配项。", flush=True)
-        else:
-            print("魔兽世界窗口未聚焦，跳过输入。", flush=True)
 
 
     def process_skill_action(self, best_match, score):
@@ -353,7 +346,6 @@ class ImageMatcher:
         使用与 GUI 预览一致的灰度 + 模板缩放算法，在单帧截图上做模板匹配。
         """
         if screenshot is None:
-            print("未提供截图。", flush=True)
             return None, None, -1.0
 
         # 统一将截图转为 BGR 彩色图像进行匹配

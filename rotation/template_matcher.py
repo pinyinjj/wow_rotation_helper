@@ -53,6 +53,56 @@ class TemplateMatcher:
             return frame_bgr
 
     @staticmethod
+    def _validate_frame(frame_bgr):
+        """验证帧是否有效"""
+        if frame_bgr is None or getattr(frame_bgr, "size", 0) == 0:
+            return None, None
+        try:
+            frame_h, frame_w = frame_bgr.shape[:2]
+            return frame_h, frame_w
+        except Exception as e:
+            print(f"[TemplateMatcher] 读取截图尺寸失败: {e}", flush=True)
+            return None, None
+    
+    @staticmethod
+    def _validate_template(tmpl_bgr):
+        """验证模板是否有效"""
+        if tmpl_bgr is None or getattr(tmpl_bgr, "size", 0) == 0:
+            return None, None
+        h, w = tmpl_bgr.shape[:2]
+        if h <= 0 or w <= 0:
+            return None, None
+        return h, w
+    
+    @staticmethod
+    def _prepare_scaled_template(tmpl_bgr, scale, frame_h, frame_w):
+        """准备缩放后的模板"""
+        h, w = tmpl_bgr.shape[:2]
+        
+        if abs(scale - 1.0) > 1e-3:
+            new_w = int(max(1, round(w * scale)))
+            new_h = int(max(1, round(h * scale)))
+            if new_h > frame_h or new_w > frame_w:
+                return None, None, None
+            use_bgr = cv2.resize(tmpl_bgr, (new_w, new_h), interpolation=cv2.INTER_AREA)
+            return use_bgr, new_w, new_h
+        else:
+            if h > frame_h or w > frame_w:
+                return None, None, None
+            return tmpl_bgr, w, h
+    
+    @staticmethod
+    def _match_template(frame_bgr, template_bgr, name):
+        """执行模板匹配"""
+        try:
+            res = cv2.matchTemplate(frame_bgr, template_bgr, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, max_loc = cv2.minMaxLoc(res)
+            return max_val, max_loc
+        except Exception as e:
+            print(f"[TemplateMatcher] 匹配 {name} 时出错: {e}", flush=True)
+            return None, None
+    
+    @staticmethod
     def match_best_icon_with_scale(frame_bgr, templates_dict, scale: float):
         """
         公共匹配函数：**直接使用彩色 BGR 图像 + 缩放** 进行模板匹配。
@@ -67,51 +117,28 @@ class TemplateMatcher:
         - best_img_info: (tmpl_bgr_used, top_left, (w, h)) 或 None
         - best_score: 最佳匹配分数（float）
         """
-        if frame_bgr is None or getattr(frame_bgr, "size", 0) == 0:
-            return None, None, None
-
-        # 直接在彩色 BGR 截图上进行模板匹配
-        try:
-            frame_h, frame_w = frame_bgr.shape[:2]
-        except Exception as e:
-            print(f"[TemplateMatcher] 读取截图尺寸失败: {e}", flush=True)
+        frame_h, frame_w = TemplateMatcher._validate_frame(frame_bgr)
+        if frame_h is None:
             return None, None, None
 
         best_name = None
         best_img_info = None
         best_score = -1.0
-
         scale = max(0.1, min(5.0, float(scale)))
 
         for name, tmpl_bgr in templates_dict.items():
-            if tmpl_bgr is None or getattr(tmpl_bgr, "size", 0) == 0:
+            h, w = TemplateMatcher._validate_template(tmpl_bgr)
+            if h is None:
                 continue
 
-            # 直接以彩色模板的尺寸为准
-            h, w = tmpl_bgr.shape[:2]
-            if h <= 0 or w <= 0:
+            use_bgr, use_w, use_h = TemplateMatcher._prepare_scaled_template(
+                tmpl_bgr, scale, frame_h, frame_w
+            )
+            if use_bgr is None:
                 continue
 
-            # 应用缩放
-            if abs(scale - 1.0) > 1e-3:
-                new_w = int(max(1, round(w * scale)))
-                new_h = int(max(1, round(h * scale)))
-                if new_h > frame_h or new_w > frame_w:
-                    continue
-                use_bgr = cv2.resize(tmpl_bgr, (new_w, new_h), interpolation=cv2.INTER_AREA)
-                use_h, use_w = new_h, new_w
-            else:
-                if h > frame_h or w > frame_w:
-                    continue
-                use_bgr = tmpl_bgr
-                use_h, use_w = h, w
-
-            try:
-                # OpenCV 支持多通道模板匹配，这里直接用彩色 BGR 图像
-                res = cv2.matchTemplate(frame_bgr, use_bgr, cv2.TM_CCOEFF_NORMED)
-                _, max_val, _, max_loc = cv2.minMaxLoc(res)
-            except Exception as e:
-                print(f"[TemplateMatcher] 匹配 {name} 时出错: {e}", flush=True)
+            max_val, max_loc = TemplateMatcher._match_template(frame_bgr, use_bgr, name)
+            if max_val is None:
                 continue
 
             if max_val > best_score:

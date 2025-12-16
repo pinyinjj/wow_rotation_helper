@@ -2,17 +2,37 @@
     "Faerie_Fire__Feral_": "t",
     "Feral_Charge___Cat": "f",
     "Mangle__Cat_": "3",
-    "Mark_of_the_Wild": "-",
+    "Mark_of_the_Wild": [
+        "-",
+        0.4
+    ],
     "Prowl": "4",
     "Rake": "e",
-    "Swipe__Cat_": "2",
-    "Add a new icon": "add icon",
+    "Swipe__Cat_": [
+        "2",
+        0.35
+    ],
+    "Add a new icon": "add",
     "Shred": "1",
-    "Tiger_s_Fury": "q",
+    "Tiger_s_Fury": [
+        "q",
+        0.4
+    ],
     "Rip": "r",
     "Berserk": "6",
-    "hdr_darkness": 1.07,
-    "zoom": 2.0,
-    "Cat_Form": "=",
-    "Ferocious_Bite": "8"
+    "hdr_darkness": 1.27,
+    "zoom": 1.76,
+    "Cat_Form": "f2",
+    "Ferocious_Bite": [
+        "8",
+        0.35
+    ],
+    "Savage_Roar": [
+        "f3",
+        0.4
+    ],
+    "classicon_druid": "f7",
+    "Dire_Bear_Form": "f1",
+    "Enrage": "5",
+    "Lacerate": "2"
 }

@@ -164,3 +164,6 @@ cython_debug/
 .idea/encodings.xml
 .idea/inspectionProfiles/
 gui/test/selected_screenshot.png
+
+# Cursor editor assets
+assets/

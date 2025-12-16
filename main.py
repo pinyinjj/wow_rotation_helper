@@ -119,13 +119,12 @@ class MainWindow(QMainWindow):
             MainFunctions.set_page(self, self.ui.load_pages.classic_page_class)
 
 
-        # capture
-        if btn.objectName() == "btn_capture":
-            # Select Menu
-            self.ui.left_menu.select_only_one(btn.objectName())
-
-            # Load Page Class
-            MainFunctions.set_page(self, self.ui.load_pages.page_capture)
+        # capture (功能已整合到预览面板)
+        # if btn.objectName() == "btn_capture":
+        #     # Select Menu
+        #     self.ui.left_menu.select_only_one(btn.objectName())
+        #     # Load Page Class
+        #     MainFunctions.set_page(self, self.ui.load_pages.page_capture)
 
 
 

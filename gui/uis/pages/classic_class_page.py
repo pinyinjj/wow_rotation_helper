@@ -6,10 +6,10 @@ import yaml
 import cv2
 import numpy as np
 from PIL import ImageGrab
-from PySide6.QtCore import QCoreApplication, QPropertyAnimation, QEasingCurve, QRect, QSize, QThread, Signal, QTimer
-from PySide6.QtGui import QIcon, Qt, QPixmap, QFont, QColor, QImage
+from PySide6.QtCore import QCoreApplication, QPropertyAnimation, QEasingCurve, QRect, QSize, QThread, Signal, QTimer, QPoint
+from PySide6.QtGui import QIcon, Qt, QPixmap, QFont, QColor, QImage, QPainter, QPen, QRegion, QGuiApplication
 from PySide6.QtWidgets import QPushButton, QGridLayout, QVBoxLayout, QLabel, QHBoxLayout, QWidget, \
-    QMainWindow, QSizePolicy, QDialog, QMessageBox, QInputDialog, QLineEdit, QSlider, QDoubleSpinBox
+    QMainWindow, QSizePolicy, QDialog, QMessageBox, QInputDialog, QLineEdit, QSlider, QDoubleSpinBox, QFileDialog, QApplication, QMenu, QFrame
 from PySide6.QtWidgets import QGraphicsDropShadowEffect
 from gui.core.json_settings import Settings
 from gui.core.functions import Functions
@@ -21,12 +21,87 @@ from rotation.template_matcher import TemplateMatcher
 from .key_binding import KeyBindDialog
 from ...widgets.py_dialog import PyDialog
 from ...widgets.py_add_icon_dialog import ModernAddIconDialog
+from datetime import datetime
+from .base_class_page import BaseClassPage
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 gui_dir = os.path.join(current_dir, "..", "..")
 
-class Ui_ClassicClassPage(object):
+
+class CaptureLabel(QLabel):
+    """自定义 QLabel 用于处理 Capture 功能的鼠标事件"""
+    def __init__(self, parent):
+        super().__init__()
+        self.parent_page = parent
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.parent_page.is_selecting = True
+            self.parent_page.x0, self.parent_page.y0 = event.position().toPoint().x(), event.position().toPoint().y()
+
+    def mouseMoveEvent(self, event):
+        if self.parent_page.is_selecting:
+            self.parent_page.x1, self.parent_page.y1 = event.position().toPoint().x(), event.position().toPoint().y()
+            self.parent_page.selection_rect = QRect(QPoint(self.parent_page.x0, self.parent_page.y0), QPoint(self.parent_page.x1, self.parent_page.y1)).normalized()
+            self.update()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton and self.parent_page.is_selecting:
+            self.parent_page.is_selecting = False
+            self.parent_page.x1, self.parent_page.y1 = event.position().toPoint().x(), event.position().toPoint().y()
+            scale_factor = QApplication.primaryScreen().devicePixelRatio()
+            self.parent_page.selection_rect = QRect(QPoint(self.parent_page.x0, self.parent_page.y0), QPoint(self.parent_page.x1, self.parent_page.y1)).normalized()
+
+            # Adjust coordinates
+            adjusted_x0, adjusted_y0 = int(self.parent_page.x0 * scale_factor), int(self.parent_page.y0 * scale_factor)
+            adjusted_x1, adjusted_y1 = int(self.parent_page.x1 * scale_factor), int(self.parent_page.y1 * scale_factor)
+
+            # Extract the selected area
+            width = abs(adjusted_x1 - adjusted_x0)
+            height = abs(adjusted_y1 - adjusted_y0)
+            cropped_image = self.parent_page.screenshot.copy(adjusted_x0, adjusted_y0, width, height)
+
+            # Display the cropped image
+            self.parent_page.display_cropped_image(cropped_image)
+
+            # Restore window settings
+            self.setWindowFlags(Qt.Widget)
+            self.setWindowState(Qt.WindowNoState)
+            self.setCursor(Qt.ArrowCursor)
+            self.hide()
+            
+            # 显示坐标并保存
+            self.parent_page.display_coordinates(self.parent_page.x0, self.parent_page.y0, self.parent_page.x1, self.parent_page.y1)
+            # 自动保存选区信息
+            self.parent_page.save_selection_info()
+
+    def paintEvent(self, event):
+        if self.parent_page.screenshot:
+            painter = QPainter(self)
+            painter.drawPixmap(0, 0, QPixmap.fromImage(self.parent_page.screenshot))
+
+            # Mask the rest of the screen
+            full_region = QRegion(self.rect())
+            if not self.parent_page.selection_rect.isNull():
+                selection_region = QRegion(self.parent_page.selection_rect)
+                masked_region = full_region.subtracted(selection_region)
+            else:
+                masked_region = full_region
+
+            painter.setClipRegion(masked_region)
+            painter.fillRect(self.rect(), QColor(0, 0, 0, 90))  # Transparent black
+
+            # Draw the selection rectangle
+            if not self.parent_page.selection_rect.isNull():
+                pen = QPen(Qt.red, 2, Qt.SolidLine)
+                painter.setPen(pen)
+                painter.drawRect(self.parent_page.selection_rect)
+
+
+class Ui_ClassicClassPage(BaseClassPage):
     def __init__(self, main_window: QMainWindow):
+        # 调用基类初始化，指定游戏版本为 classic
+        super().__init__(main_window, game_version='classic')
         self.main_window = main_window
         self.settings = Settings()
         self.debug = self.settings.items.get("debug", "False").lower() == "true"
@@ -41,8 +116,7 @@ class Ui_ClassicClassPage(object):
         self.config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "classic_config", "config.json")
         self.config_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "classic_config")
         
-        # 用于存储图标widget的字典，key为图标名称，value为icon_widget
-        self.icon_widgets = {}  # 存储所有图标widget
+        # 图标高亮相关（icon_widgets 和 icon_paths 已在父类初始化）
         self.current_highlighted_icon = None  # 当前高亮的图标名称
         self.highlight_animations = {}  # 存储高亮动画
 
@@ -58,6 +132,14 @@ class Ui_ClassicClassPage(object):
 
         # HDR 亮度参数（0.1 - 5.0，数值越小画面越暗，>1 会整体变亮）
         self.hdr_darkness = 0.3
+
+        # Capture 相关变量
+        self.is_selecting = False
+        self.x0 = self.y0 = self.x1 = self.y1 = 0
+        self.selection_rect = QRect()
+        self.screenshot = None  # Store the full screenshot
+        self.full_screen_label = None
+        self.cropped_image_label = None
 
     def setupUi(self, page_skills):
 
@@ -97,6 +179,11 @@ class Ui_ClassicClassPage(object):
             self.talent_ability_layout.setColumnMinimumWidth(i, min_column_width)
             self.talent_ability_layout.setColumnStretch(i, 0)  # 不拉伸，保持固定宽度
         self.talent_ability.setLayout(self.talent_ability_layout)
+        # 设置talent_ability_group的最小宽度，确保6列都能完整显示
+        # 6列 * 149 + 5个间距 * 10 + 左右边距 = 6*149 + 5*10 + 40 = 984
+        self.talent_ability.setMinimumWidth(6 * min_column_width + 5 * 10 + 40)
+        # 设置 sizePolicy，防止被压缩
+        self.talent_ability.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
         self.page_skills_layout.addWidget(self.talent_ability)
         self.talent_ability.setVisible(False)
 
@@ -111,6 +198,12 @@ class Ui_ClassicClassPage(object):
         self.preview_region_label = QLabel()
         self.preview_region_label.setFixedSize(220, 220)
         self.preview_region_label.setStyleSheet("border: 1px solid rgba(255, 255, 255, 50);")
+
+        # 手动框选截屏预览（Capture 功能使用）
+        self.cropped_image_label = QLabel()
+        self.cropped_image_label.setFixedSize(220, 220)
+        self.cropped_image_label.setStyleSheet("border: 1px solid rgba(255, 255, 255, 50);")
+        self.cropped_image_label.setVisible(False)
 
         self.preview_best_icon_label = QLabel()
         self.preview_best_icon_label.setFixedSize(72, 72)
@@ -168,11 +261,26 @@ class Ui_ClassicClassPage(object):
         self.preview_button.setMinimumWidth(220)
         self.preview_button.clicked.connect(self.toggle_preview_region)
 
+        # Capture 按钮：全屏截图选区功能
+        self.capture_button = self.create_button(icon="trim_icon.svg")
+        self.capture_button.setText("Capture")
+        self.capture_button.setMinimumWidth(220)
+        self.capture_button.clicked.connect(self.start_capture)
+
         # 布局：第一行左边 region 图，右边图标与文本；第二行缩放控制；第三行按钮
         right_box = QVBoxLayout()
         right_box.addWidget(self.preview_best_icon_label, 0, Qt.AlignTop)
         right_box.addWidget(self.preview_coordinates_label, 0, Qt.AlignTop)
         right_box.addStretch()
+
+        # Scale 告警标签
+        self.scale_warning_label = QLabel()
+        self.scale_warning_label.setStyleSheet(
+            "color: #ff5555; background-color: rgba(255, 85, 85, 50); padding: 8px 12px; border-radius: 6px; font-size: 16px; font-weight: bold;"
+        )
+        self.scale_warning_label.setVisible(False)
+        self.scale_warning_label.setWordWrap(True)
+        self.scale_warning_label.setMinimumHeight(40)
 
         scale_row = QHBoxLayout()
         scale_row.addWidget(QLabel("Scale:"))
@@ -184,12 +292,44 @@ class Ui_ClassicClassPage(object):
         hdr_row.addWidget(self.hdr_slider)
         hdr_row.addWidget(self.hdr_spin)
 
-        self.preview_layout.addWidget(self.preview_region_label, 0, 0)
-        self.preview_layout.addLayout(right_box, 0, 1)
-        self.preview_layout.addLayout(scale_row, 1, 0, 1, 2)
-        self.preview_layout.addLayout(hdr_row, 2, 0, 1, 2)
-        # 预览按钮居中显示
-        self.preview_layout.addWidget(self.preview_button, 3, 0, 1, 2, alignment=Qt.AlignCenter)
+        # 创建容器widget来包含所有内部组件（除了preview_button）
+        self.preview_content_widget = QWidget()
+        self.preview_content_layout = QGridLayout()
+        self.preview_content_widget.setLayout(self.preview_content_layout)
+        
+        # 第一行：左侧 region 预览，中间 cropped 预览，右侧图标与文本
+        preview_images_row = QHBoxLayout()
+        preview_images_row.addWidget(self.preview_region_label)
+        preview_images_row.addWidget(self.cropped_image_label)
+        preview_images_row.addLayout(right_box)
+        self.preview_content_layout.addLayout(preview_images_row, 0, 0, 1, 2)
+        # Scale 告警行（在 scale_row 上方）
+        self.preview_content_layout.addWidget(self.scale_warning_label, 1, 0, 1, 2)
+        self.preview_content_layout.addLayout(scale_row, 2, 0, 1, 2)
+        self.preview_content_layout.addLayout(hdr_row, 3, 0, 1, 2)
+
+        # 第四行：Capture 按钮，居中
+        buttons_row = QHBoxLayout()
+        buttons_row.addStretch()
+        buttons_row.addWidget(self.capture_button)
+        buttons_row.addStretch()
+        self.preview_content_layout.addLayout(buttons_row, 4, 0, 1, 2)
+        
+        # 初始状态：隐藏内容容器
+        self.preview_content_widget.setVisible(False)
+        
+        # 主布局：第一行是preview_button（居中），第二行是内容容器
+        preview_button_row = QHBoxLayout()
+        preview_button_row.addStretch()
+        preview_button_row.addWidget(self.preview_button)
+        preview_button_row.addStretch()
+        self.preview_layout.addLayout(preview_button_row, 0, 0, 1, 2)
+        self.preview_layout.addWidget(self.preview_content_widget, 1, 0, 1, 2)
+
+        # 初始化全屏标签（用于 Capture 功能）
+        self.full_screen_label = CaptureLabel(self)
+        self.full_screen_label.setGeometry(QGuiApplication.primaryScreen().geometry())
+        self.full_screen_label.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
 
         self.button_layout = QHBoxLayout()
         self.page_skills_layout.addLayout(self.button_layout)
@@ -229,8 +369,119 @@ class Ui_ClassicClassPage(object):
             self.load_logger_frame()
 
     def reload_icons(self):
+        """重新加载图标 - 实现基类的抽象方法"""
         self.load_ability_icons(self.selected_class_name, self.selected_talent_name)
         # print(f'reload for {self.selected_class_name, self.selected_talent_name}')
+
+    # --------------------
+    # Capture 功能相关方法
+    # --------------------
+    def start_capture(self):
+        """ Capture the current screen and start the selection process. """
+        # 停止预览和轮转线程
+        if self.is_running and self.rotation_thread and self.rotation_thread.isRunning():
+            self.toggle_start_pause()
+        if self.preview_active:
+            self.preview_timer.stop()
+            self.preview_active = False
+            self.preview_button.setText("Preview Region")
+            self.preview_button.setIcon(QIcon(Functions.set_svg_icon("refresh.svg")))
+
+        # Grab the current screen's screenshot
+        screen = QGuiApplication.primaryScreen()
+        self.screenshot = screen.grabWindow(0).toImage()
+
+        self.x0 = self.y0 = self.x1 = self.y1 = 0
+        self.is_selecting = False
+        self.selection_rect = QRect()
+
+        # Display the screenshot in the full-screen label
+        self.full_screen_label.setPixmap(QPixmap.fromImage(self.screenshot))
+        self.full_screen_label.setVisible(True)
+        self.full_screen_label.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+        self.full_screen_label.setCursor(Qt.CrossCursor)
+        self.full_screen_label.showFullScreen()
+
+    def display_coordinates(self, x0, y0, x1, y1):
+        """ Display the coordinates of the selection. """
+        self.preview_coordinates_label.setText(f"x0y0: ({x0}, {y0}), x1y1: ({x1}, {y1})")
+        self.preview_coordinates_label.adjustSize()
+        self.preview_coordinates_label.setVisible(True)
+
+    def display_cropped_image(self, cropped_image):
+        """ Display the cropped screenshot in the QLabel widget. """
+        if cropped_image:
+            pixmap = QPixmap.fromImage(cropped_image)
+            image_width = pixmap.width()
+            image_height = pixmap.height()
+
+            # If the image exceeds 300x300, scale it proportionally
+            if image_width > 300 or image_height > 300:
+                pixmap = pixmap.scaled(300, 300, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+            # Adjust the label size to the image size or keep it 200x200 minimum
+            self.cropped_image_label.setFixedSize(
+                max(200, pixmap.width()), max(200, pixmap.height())
+            )
+            self.cropped_image_label.setPixmap(pixmap)
+            self.cropped_image_label.setVisible(True)
+
+    def save_selection_info(self):
+        """Save the current selection coordinates to a YAML file."""
+        if self.selection_rect.isNull():
+            print("No selection made.")
+            return
+
+        # 将窗口坐标转换为实际屏幕坐标后再写入配置
+        scale_factor = QApplication.primaryScreen().devicePixelRatio()
+        adjusted_x0 = int(self.x0 * scale_factor)
+        adjusted_y0 = int(self.y0 * scale_factor)
+        adjusted_x1 = int(self.x1 * scale_factor)
+        adjusted_y1 = int(self.y1 * scale_factor)
+
+        new_region = {
+            "x1": adjusted_x0,
+            "y1": adjusted_y0,
+            "x2": adjusted_x1,
+            "y2": adjusted_y1,
+        }
+
+        config = self.load_rotation_config()
+        config['region'] = new_region
+        self.save_rotation_config(config)
+
+    def save_rotation_config(self, config):
+        """Save the configuration to the YAML file."""
+        # 计算项目根目录的绝对路径
+        # __file__ 是 gui/uis/pages/classic_class_page.py，需要向上4级到项目根目录
+        current_file = os.path.abspath(__file__)
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
+        config_path = os.path.join(project_root, 'rotation', 'rotation_config.yaml')
+        
+        # 确保目录存在
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, 'w', encoding='utf-8') as file:
+            yaml.dump(config, file, default_flow_style=False, allow_unicode=True)
+        print(f"Region saved to: {config_path}")
+
+    def save_icon_as(self):
+        """ Save the cropped screenshot to a user-selected directory. """
+        if self.cropped_image_label.pixmap() is None:
+            print("No image to save.")
+            return
+
+        # Generate a current timestamp string
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        # Open a dialog to select the save file path, with a default name based on the timestamp
+        file_path, _ = QFileDialog.getSaveFileName(
+            self.main_window, "Save Image", f"{timestamp}.png", "PNG Files (*.png);;All Files (*)"
+        )
+
+        if file_path:
+            # Save the pixmap from cropped_image_label as an image file
+            self.cropped_image_label.pixmap().save(file_path, "PNG")
+            print(f"Screenshot saved to: {file_path}")
 
     # --------------------
     # 预览：配置与模板加载
@@ -238,7 +489,11 @@ class Ui_ClassicClassPage(object):
     def load_rotation_config(self):
         """读取 rotation/rotation_config.yaml，用于获取 region 配置。"""
         try:
-            with open('rotation/rotation_config.yaml', 'r', encoding='utf-8') as file:
+            # 计算项目根目录的绝对路径
+            current_file = os.path.abspath(__file__)
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
+            config_path = os.path.join(project_root, 'rotation', 'rotation_config.yaml')
+            with open(config_path, 'r', encoding='utf-8') as file:
                 return yaml.safe_load(file) or {}
         except FileNotFoundError:
             return {}
@@ -385,6 +640,8 @@ class Ui_ClassicClassPage(object):
         self.scale_spin.blockSignals(True)
         self.scale_spin.setValue(scale)
         self.scale_spin.blockSignals(False)
+        # 检查scale是否过大
+        self._check_scale_warning()
 
     def _on_scale_spin_changed(self, value: float):
         """数值输入改变时，同步更新缩放因子和滑动条。"""
@@ -394,14 +651,85 @@ class Ui_ClassicClassPage(object):
         self.scale_slider.blockSignals(True)
         self.scale_slider.setValue(slider_val)
         self.scale_slider.blockSignals(False)
+        # 检查scale是否过大
+        self._check_scale_warning()
 
     def _on_scale_slider_released(self):
         """滑动条松开时，将当前缩放写入配置文件。"""
         self._save_template_scale_to_config()
+        # 检查scale是否过大
+        self._check_scale_warning()
 
     def _on_scale_spin_finished(self):
         """输入框编辑完成时，将当前缩放写入配置文件。"""
         self._save_template_scale_to_config()
+        # 检查scale是否过大
+        self._check_scale_warning()
+
+    def _check_scale_warning(self):
+        """检查当前scale值是否过大，如果过大则显示告警"""
+        scale = float(getattr(self, "template_scale", 1.0))
+        
+        # 获取区域大小
+        config = self.load_rotation_config()
+        region_cfg = config.get("region")
+        if not region_cfg:
+            self.scale_warning_label.setVisible(False)
+            return
+        
+        try:
+            x1 = int(region_cfg.get("x1", 0))
+            y1 = int(region_cfg.get("y1", 0))
+            x2 = int(region_cfg.get("x2", 0))
+            y2 = int(region_cfg.get("y2", 0))
+            region_w = x2 - x1
+            region_h = y2 - y1
+        except Exception:
+            self.scale_warning_label.setVisible(False)
+            return
+        
+        if region_w <= 0 or region_h <= 0:
+            self.scale_warning_label.setVisible(False)
+            return
+        
+        # 获取模板列表
+        templates = self._load_preview_templates()
+        if not templates:
+            self.scale_warning_label.setVisible(False)
+            return
+        
+        # 检查是否有模板缩放后会超过区域大小
+        max_template_w = 0
+        max_template_h = 0
+        max_template_name = None
+        
+        for name, tmpl_bgr in templates:
+            if tmpl_bgr is None or tmpl_bgr.size == 0:
+                continue
+            h, w = tmpl_bgr.shape[:2]
+            if h <= 0 or w <= 0:
+                continue
+            
+            # 计算缩放后的尺寸
+            new_w = int(max(1, round(w * scale)))
+            new_h = int(max(1, round(h * scale)))
+            
+            # 检查是否超过区域大小
+            if new_h > region_h or new_w > region_w:
+                if new_w > max_template_w or new_h > max_template_h:
+                    max_template_w = new_w
+                    max_template_h = new_h
+                    max_template_name = name
+        
+        # 如果有模板超过区域大小，显示告警
+        if max_template_name:
+            self.scale_warning_label.setText(
+                f"⚠️ Warning: Scale too large! Template '{max_template_name}' "
+                f"({max_template_w}x{max_template_h}) exceeds region size ({region_w}x{region_h})"
+            )
+            self.scale_warning_label.setVisible(True)
+        else:
+            self.scale_warning_label.setVisible(False)
 
     def _save_template_scale_to_config(self):
         """将当前模板缩放系数写入配置（经典服）。
@@ -540,6 +868,8 @@ class Ui_ClassicClassPage(object):
             self.preview_active = False
             self.preview_button.setText("Preview Region")
             self.preview_button.setIcon(QIcon(Functions.set_svg_icon("refresh.svg")))
+            # 隐藏内容容器
+            self.preview_content_widget.setVisible(False)
         else:
             # 启动预览前清空缓存，确保按当前天赋重建模板
             self.preview_templates = None
@@ -555,11 +885,58 @@ class Ui_ClassicClassPage(object):
                 )
                 return
 
+            # 显示内容容器
+            self.preview_content_widget.setVisible(True)
             self.preview_timer.start()
             self.preview_active = True
             self.preview_button.setText("Stop Preview")
             self.preview_button.setIcon(QIcon(Functions.set_svg_icon("pause.svg")))
+            # 延迟确保talent abilities图标不被压缩，等待布局完成
+            # 使用多个延迟调用，确保在不同布局阶段都能正确设置
+            QTimer.singleShot(50, self._ensure_talent_ability_column_widths)
+            QTimer.singleShot(150, self._ensure_talent_ability_column_widths)
+            QTimer.singleShot(300, self._ensure_talent_ability_column_widths)
 
+    def _ensure_talent_ability_column_widths(self):
+        """确保talent abilities布局的列宽不被压缩"""
+        if not self.talent_ability.isVisible():
+            return
+        
+        # 重新应用列宽设置，防止被压缩
+        min_column_width = 64 + 80 + 5  # 图标宽度 + 按钮宽度 + 间距
+        for i in range(6):  # 假设最多6列
+            self.talent_ability_layout.setColumnMinimumWidth(i, min_column_width)
+            self.talent_ability_layout.setColumnStretch(i, 0)  # 不拉伸，保持固定宽度
+        
+        # 确保所有ability widget都有正确的sizePolicy
+        for i in range(self.talent_ability_layout.count()):
+            item = self.talent_ability_layout.itemAt(i)
+            if item and item.widget():
+                widget = item.widget()
+                widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+                # 确保最小尺寸
+                widget.setMinimumSize(64 + 80 + 5, 64)
+        
+        # 确保 talent_ability group 本身有正确的最小宽度和 sizePolicy
+        min_group_width = 6 * min_column_width + 5 * 10 + 40  # 6列 + 5个间距 + 边距
+        self.talent_ability.setMinimumWidth(min_group_width)
+        self.talent_ability.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
+        
+        # 确保窗口宽度足够
+        min_required_width = min_group_width
+        current_width = self.main_window.width()
+        if current_width < min_required_width:
+            self.main_window.setMinimumWidth(min_required_width)
+            if current_width < min_required_width:
+                self.main_window.resize(min_required_width, self.main_window.height())
+        
+        # 强制更新布局
+        self.talent_ability_layout.update()
+        self.talent_ability.updateGeometry()
+        # 触发父布局的更新
+        if self.talent_ability.parent():
+            self.talent_ability.parent().updateGeometry()
+    
     def _preview_tick(self):
         """定时器回调：每一帧执行一次预览刷新。"""
         self.preview_current_region()
@@ -630,17 +1007,30 @@ class Ui_ClassicClassPage(object):
                 Qt.SmoothTransformation,
             )
             self.preview_best_icon_label.setPixmap(pixmap_icon)
+            self.preview_best_icon_label.setVisible(True)
+        else:
+            # 如果没有匹配，清空图标显示
+            self.preview_best_icon_label.clear()
+            self.preview_best_icon_label.setVisible(True)
 
-        # 在坐标标签中展示匹配信息
-        if best_name is not None and best_score is not None:
+        # 在坐标标签中展示匹配信息（始终显示，即使没有匹配）
+        # 如果有 best_img_info，说明有匹配结果，应该显示
+        if best_img_info is not None and best_name is not None:
+            # best_score 可能为 -1.0（初始值），但如果有 best_img_info，说明有匹配
+            score_text = f"({best_score:.2f})" if best_score is not None and best_score > -1.0 else "(N/A)"
             self.preview_coordinates_label.setText(
-                f"Region: ({x1}, {y1}) - ({x2}, {y2}) | Best: {best_name} ({best_score:.2f})"
+                f"Region: ({x1}, {y1}) - ({x2}, {y2}) | Best: {best_name} {score_text}"
             )
-            self.preview_coordinates_label.adjustSize()
-            self.preview_coordinates_label.setVisible(True)
+        else:
+            # 即使没有匹配，也显示区域信息
+            self.preview_coordinates_label.setText(
+                f"Region: ({x1}, {y1}) - ({x2}, {y2}) | Best: No match"
+            )
+        self.preview_coordinates_label.adjustSize()
+        self.preview_coordinates_label.setVisible(True)
 
     def save_config_with_rules(self):
-        """点击加载时，保存所有技能的快捷键到配置文件"""
+        """点击加载时，保存所有技能的快捷键和阈值到配置文件"""
         # 生成文件名
         class_name = self.selected_class_name if self.selected_class else "unknown_class"
         talent_name = self.selected_talent_name if self.selected_talent else "unknown_talent"
@@ -671,7 +1061,39 @@ class Ui_ClassicClassPage(object):
                 # 从按钮的 toolTip 中获取技能名称
                 ability_name = button.toolTip()
                 if ability_name and shortcut:
-                    existing_config[ability_name] = shortcut.lower()  # 将快捷键转换为小写
+                    shortcut_lower = shortcut.lower()  # 将快捷键转换为小写
+                    
+                    # 检查 config_data 中是否已有阈值设置
+                    if ability_name in self.config_data:
+                        config_value = self.config_data[ability_name]
+                        # 如果是列表格式 [shortcut, threshold]，保留阈值
+                        if isinstance(config_value, list) and len(config_value) >= 2:
+                            existing_config[ability_name] = [shortcut_lower, config_value[1]]
+                        else:
+                            # 否则只保存快捷键（旧格式兼容）
+                            existing_config[ability_name] = shortcut_lower
+                    else:
+                        # 如果 config_data 中没有，检查 existing_config 中是否有阈值
+                        if ability_name in existing_config:
+                            old_value = existing_config[ability_name]
+                            # 如果是列表格式，更新快捷键但保留阈值
+                            if isinstance(old_value, list) and len(old_value) >= 2:
+                                existing_config[ability_name] = [shortcut_lower, old_value[1]]
+                            else:
+                                existing_config[ability_name] = shortcut_lower
+                        else:
+                            # 新技能，只保存快捷键
+                            existing_config[ability_name] = shortcut_lower
+                elif ability_name:
+                    # 如果只有技能名称但没有快捷键，检查 config_data 中是否有阈值设置
+                    # 这种情况下，如果用户设置了阈值但还没有设置快捷键，我们也应该保存阈值
+                    if ability_name in self.config_data:
+                        config_value = self.config_data[ability_name]
+                        # 如果是列表格式且第一个元素为空字符串（只有阈值），保留到 existing_config
+                        if isinstance(config_value, list) and len(config_value) >= 2 and config_value[0] == "":
+                            # 只保存阈值，快捷键为空时不保存到文件（因为 matcher 需要快捷键）
+                            # 但我们可以保留在 existing_config 中，等用户设置快捷键后再保存
+                            pass  # 暂时不保存，等用户设置快捷键
 
         # 将更新后的配置保存到文件
         with open(config_filepath, 'w', encoding='utf-8') as file:
@@ -734,6 +1156,8 @@ class Ui_ClassicClassPage(object):
                         self.scale_spin.blockSignals(True)
                         self.scale_spin.setValue(scale)
                         self.scale_spin.blockSignals(False)
+                        # 检查scale是否过大
+                        self._check_scale_warning()
                         # print(f"[Classic] 已从 {filepath} 中的 zoom 初始化缩放倍率: {scale}")
                     except Exception as e:
                         print(f"[Classic] 解析 zoom 字段失败: {e}", flush=True)
@@ -816,10 +1240,9 @@ class Ui_ClassicClassPage(object):
             # Ensure the RotationThread is running before trying to stop it
             if self.rotation_thread and self.rotation_thread.isRunning():
                 self.rotation_thread.stop()  # Stop the RotationThread
-                self.rotation_thread.wait()  # Wait for the thread to finish
-                # clean_up() will be called in on_thread_finished() when finished signal is emitted
+                # 不再调用 wait()，避免主线程卡死；真正的结束在 on_thread_finished 中清理
 
-                # Update button appearance after the thread has stopped
+                # Update button appearance immediately (thread will finish asynchronously)
                 self.start_button.setText("Start")
                 self.start_button.setIcon(QIcon(Functions.set_svg_icon("start.svg")))
                 self.is_running = False
@@ -884,15 +1307,59 @@ class Ui_ClassicClassPage(object):
         self.class_layout.setHorizontalSpacing(spacing)
 
     def create_class_button(self, icon_path, icon_size, class_name, on_click_callback):
-        class_button = QPushButton()
-        class_button.setProperty("name", class_name)
-        icon = QIcon(icon_path)
-        class_button.setIcon(icon)
-        class_button.setIconSize(QSize(icon_size.width() - 10, icon_size.height() - 10))
-        class_button.setFixedSize(icon_size.width(), icon_size.height())
-        class_button.setStyleSheet(self.get_button_style(selected=False))
-        class_button.clicked.connect(lambda _: self.on_class_button_clicked(class_button, on_click_callback))
-        return class_button
+        """创建现代化的class选择按钮，使用QFrame包装图标，添加阴影效果"""
+        # 创建主容器Frame（边框容器）
+        container = QFrame()
+        container.setProperty("name", class_name)
+        container.setFixedSize(icon_size.width(), icon_size.height())
+        container.setCursor(Qt.PointingHandCursor)
+        container.setObjectName(f"class_button_{class_name}")
+        
+        # 先设置边框样式
+        container.setStyleSheet(self.get_class_button_style(selected=False))
+        
+        # 创建内部图标容器，使用绝对定位让图标在边框中心
+        # 边框需要往右下移动1-2像素，所以左边距和上边距稍大，右边距和下边距稍小
+        border_width = 3
+        border_offset = 0  # 边框往右下移动的像素数
+        icon_inner_size = icon_size.width() - border_width * 2
+        
+        # 创建图标标签
+        icon_label = QLabel(container)
+        icon_label.setFixedSize(icon_inner_size, icon_inner_size)
+        icon_label.setScaledContents(True)
+        icon_label.setAlignment(Qt.AlignCenter)
+        
+        # 计算图标位置：让图标在视觉上居中，边框稍微往右下
+        # 左边距 = border_width + border_offset，右边距 = border_width - border_offset
+        icon_x = border_width + border_offset
+        icon_y = border_width + border_offset
+        icon_label.move(icon_x, icon_y)
+        
+        try:
+            icon_pixmap = QIcon(icon_path).pixmap(icon_inner_size, icon_inner_size)
+            icon_label.setPixmap(icon_pixmap)
+        except Exception as e:
+            print(f"加载class图标错误: {e}")
+            icon_label.setText(class_name[:4])
+            icon_label.setAlignment(Qt.AlignCenter)
+        
+        # 添加阴影效果
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(12)
+        shadow.setXOffset(0)
+        shadow.setYOffset(4)
+        shadow.setColor(QColor(0, 0, 0, 80))
+        container.setGraphicsEffect(shadow)
+        
+        # 连接点击事件
+        def handle_click(event):
+            if event.button() == Qt.LeftButton:
+                self.on_class_button_clicked(container, on_click_callback)
+        
+        container.mousePressEvent = handle_click
+        
+        return container
 
     def on_class_button_clicked(self, class_button, on_click_callback):
         if self.selected_talent:
@@ -900,7 +1367,12 @@ class Ui_ClassicClassPage(object):
             self.selected_talent_name = None
 
         if self.selected_class and self.selected_class != class_button:
-            self.selected_class.setStyleSheet(self.get_button_style(selected=False))
+            self.selected_class.setStyleSheet(self.get_class_button_style(selected=False))
+            # 更新阴影效果，恢复为默认阴影
+            shadow = self.selected_class.graphicsEffect()
+            if shadow:
+                shadow.setColor(QColor(0, 0, 0, 80))
+                shadow.setBlurRadius(12)
             self.clear_layout(self.talent_layout)
             self.clear_layout(self.talent_ability_layout)
             self.talent_group.setVisible(False)
@@ -908,7 +1380,21 @@ class Ui_ClassicClassPage(object):
 
         self.selected_class = class_button
         self.selected_class_name = class_button.property("name")
-        class_button.setStyleSheet(self.get_button_style(selected=True))
+        class_button.setStyleSheet(self.get_class_button_style(selected=True))
+        
+        # 更新选中状态的阴影效果
+        shadow = class_button.graphicsEffect()
+        if shadow:
+            # 将十六进制颜色转换为QColor
+            context_color = self.themes["app_color"]["context_color"]
+            if context_color.startswith("#"):
+                context_color = context_color[1:]
+            r = int(context_color[0:2], 16)
+            g = int(context_color[2:4], 16)
+            b = int(context_color[4:6], 16)
+            shadow.setColor(QColor(r, g, b, 150))
+            shadow.setBlurRadius(16)
+        
         on_click_callback(class_button)
 
         self.talent_group.setVisible(True)
@@ -923,14 +1409,32 @@ class Ui_ClassicClassPage(object):
 
         if self.selected_talent and self.selected_talent != button:
             print("Deselecting previous talent button.")
-            self.selected_talent.setStyleSheet(self.get_button_style(selected=False))
+            self.selected_talent.setStyleSheet(self.get_talent_button_style(selected=False))
+            # 更新阴影效果，恢复为默认阴影
+            shadow = self.selected_talent.graphicsEffect()
+            if shadow:
+                shadow.setColor(QColor(0, 0, 0, 80))
+                shadow.setBlurRadius(12)
 
         # 记录选中的按钮
         self.selected_talent = button
         print(f"Selected talent button: {self.selected_talent}")
 
         # 更新按钮样式
-        button.setStyleSheet(self.get_button_style(selected=True))
+        button.setStyleSheet(self.get_talent_button_style(selected=True))
+        
+        # 更新选中状态的阴影效果
+        shadow = button.graphicsEffect()
+        if shadow:
+            # 将十六进制颜色转换为QColor
+            context_color = self.themes["app_color"]["context_color"]
+            if context_color.startswith("#"):
+                context_color = context_color[1:]
+            r = int(context_color[0:2], 16)
+            g = int(context_color[2:4], 16)
+            b = int(context_color[4:6], 16)
+            shadow.setColor(QColor(r, g, b, 150))
+            shadow.setBlurRadius(16)
         # print("Button style updated.")
 
         # 清空天赋能力布局
@@ -961,6 +1465,11 @@ class Ui_ClassicClassPage(object):
 
         # 显示预览区域（选择天赋后自动展开，以容纳预览内容）
         self.preview_group.setVisible(True)
+        # 延迟确保talent abilities图标不被压缩，等待布局完成
+        # 使用多个延迟调用，确保在不同布局阶段都能正确设置
+        QTimer.singleShot(50, self._ensure_talent_ability_column_widths)
+        QTimer.singleShot(150, self._ensure_talent_ability_column_widths)
+        QTimer.singleShot(300, self._ensure_talent_ability_column_widths)
 
         # 确保主窗口高度足够容纳预览区域
         try:
@@ -1003,41 +1512,66 @@ class Ui_ClassicClassPage(object):
         # self.adjust_main_window_size()  # 已禁用自动调整窗口大小
 
     def create_talent_button(self, icon_path, icon_size, talent_name, class_name):
-        # Create the QPushButton
-        talent_button = QPushButton()
-        print(f"create_talent_button {talent_name}")
-
-        # Set a property for identifying the button
-        talent_button.setProperty("name", talent_name)
-
-        # Load the image using QPixmap
-        pixmap = QPixmap(icon_path)
-
-        # Scale the pixmap to fit the button size, keeping aspect ratio
-        scaled_pixmap = pixmap.scaled(
-            icon_size.width() - 10,
-            icon_size.height() - 10,
-            Qt.KeepAspectRatio,
-            Qt.SmoothTransformation
-        )
-
-        # Create a QIcon from the scaled QPixmap and set it on the button
-        icon = QIcon(scaled_pixmap)
-        talent_button.setIcon(icon)
-        talent_button.setIconSize(QSize(icon_size.width() - 10, icon_size.height() - 10))
-
-        # Set the button's fixed size
-        talent_button.setFixedSize(icon_size.width(), icon_size.height())
-
-        # Apply the stylesheet
-        talent_button.setStyleSheet(self.get_button_style(selected=False))
-
-        # Connect the button click signal to the appropriate slot
-        talent_button.clicked.connect(
-            lambda _: self.on_talent_button_clicked(talent_button, talent_name, class_name)
-        )
-
-        return talent_button
+        """创建现代化的talent选择按钮，使用QFrame包装图标，添加阴影效果"""
+        # 创建主容器Frame（边框容器）
+        container = QFrame()
+        container.setProperty("name", talent_name)
+        container.setFixedSize(icon_size.width(), icon_size.height())
+        container.setCursor(Qt.PointingHandCursor)
+        container.setObjectName(f"talent_button_{talent_name}")
+        
+        # 先设置边框样式
+        container.setStyleSheet(self.get_talent_button_style(selected=False))
+        
+        # 创建内部图标容器，使用绝对定位让图标在边框中心
+        # 边框需要往右下移动1-2像素，所以左边距和上边距稍大，右边距和下边距稍小
+        border_width = 3
+        border_offset = 0  # 边框往右下移动的像素数
+        icon_inner_size = icon_size.width() - border_width * 2
+        
+        # 创建图标标签
+        icon_label = QLabel(container)
+        icon_label.setFixedSize(icon_inner_size, icon_inner_size)
+        icon_label.setScaledContents(True)
+        icon_label.setAlignment(Qt.AlignCenter)
+        
+        # 计算图标位置：让图标在视觉上居中，边框稍微往右下
+        # 左边距 = border_width + border_offset，右边距 = border_width - border_offset
+        icon_x = border_width + border_offset
+        icon_y = border_width + border_offset
+        icon_label.move(icon_x, icon_y)
+        
+        try:
+            # 加载并缩放图标
+            pixmap = QPixmap(icon_path)
+            scaled_pixmap = pixmap.scaled(
+                icon_inner_size,
+                icon_inner_size,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+            icon_label.setPixmap(scaled_pixmap)
+        except Exception as e:
+            print(f"加载talent图标错误: {e}")
+            icon_label.setText(talent_name[:4])
+            icon_label.setAlignment(Qt.AlignCenter)
+        
+        # 添加阴影效果
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(12)
+        shadow.setXOffset(0)
+        shadow.setYOffset(4)
+        shadow.setColor(QColor(0, 0, 0, 80))
+        container.setGraphicsEffect(shadow)
+        
+        # 连接点击事件
+        def handle_click(event):
+            if event.button() == Qt.LeftButton:
+                self.on_talent_button_clicked(container, talent_name, class_name)
+        
+        container.mousePressEvent = handle_click
+        
+        return container
 
     def load_talent_icons(self, class_name):
         # Clear the existing icons in the layout
@@ -1302,7 +1836,62 @@ class Ui_ClassicClassPage(object):
         # 延迟执行以确保布局完成
         QTimer.singleShot(150, calculate_and_resize)
 
+    def get_class_button_style(self, selected):
+        """获取现代化的class按钮样式"""
+        if selected:
+            return f"""
+            QFrame {{
+                border: 3px solid {self.themes["app_color"]["context_color"]};
+                background-color: {self.themes["app_color"]["bg_two"]};
+                border-radius: 10px;
+            }}
+            QFrame:hover {{
+                background-color: {self.themes["app_color"]["bg_three"]};
+                border-color: {self.themes["app_color"]["context_hover"]};
+            }}
+            """
+        else:
+            return f"""
+            QFrame {{
+                border: 2px solid {self.themes["app_color"]["bg_three"]};
+                background-color: {self.themes["app_color"]["bg_two"]};
+                border-radius: 10px;
+            }}
+            QFrame:hover {{
+                background-color: {self.themes["app_color"]["bg_three"]};
+                border-color: {self.themes["app_color"]["context_color"]};
+            }}
+            """
+    
+    def get_talent_button_style(self, selected):
+        """获取现代化的talent按钮样式"""
+        if selected:
+            return f"""
+            QFrame {{
+                border: 3px solid {self.themes["app_color"]["context_color"]};
+                background-color: {self.themes["app_color"]["bg_two"]};
+                border-radius: 10px;
+            }}
+            QFrame:hover {{
+                background-color: {self.themes["app_color"]["bg_three"]};
+                border-color: {self.themes["app_color"]["context_hover"]};
+            }}
+            """
+        else:
+            return f"""
+            QFrame {{
+                border: 2px solid {self.themes["app_color"]["bg_three"]};
+                background-color: {self.themes["app_color"]["bg_two"]};
+                border-radius: 10px;
+            }}
+            QFrame:hover {{
+                background-color: {self.themes["app_color"]["bg_three"]};
+                border-color: {self.themes["app_color"]["context_color"]};
+            }}
+            """
+    
     def get_button_style(self, selected):
+        """保留原有的按钮样式方法，用于talent按钮等其他按钮"""
         if selected:
             return """
             QPushButton {
@@ -1335,6 +1924,7 @@ class Ui_ClassicClassPage(object):
             if icon_name in self.highlight_animations:
                 self.remove_highlight(icon_name)
         self.icon_widgets.clear()
+        self.icon_paths.clear()
         self.current_highlighted_icon = None
         
         # Clear existing items in the layout
@@ -1349,46 +1939,33 @@ class Ui_ClassicClassPage(object):
         row = 0
         col = 0
 
-        def create_icon_widget(icon_path, tooltip_text):
-            """Creates a widget with an icon and sets up layout."""
-            icon_label = QLabel()
-            icon_label.setFixedSize(64, 64)
-            icon_label.setScaledContents(True)
-
-            try:
-                icon_label.setPixmap(QIcon(icon_path).pixmap(64, 64))
-            except Exception as e:
-                print(f"加载图标错误: {e}")
-                icon_label.setText("No Icon")
-
-            icon_label.setToolTip(tooltip_text)
-
-            icon_layout = QVBoxLayout()
-            icon_layout.addWidget(icon_label)
-
-            icon_widget = QWidget()
-            icon_widget.setLayout(icon_layout)
-            icon_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-            return icon_widget
-
         for i, icon_path in enumerate(abilities):
             ability_name = os.path.splitext(os.path.basename(icon_path))[0]
 
-            # Create icon widget for each ability
-            icon_widget = create_icon_widget(icon_path, ability_name)
+            # Create icon widget for each ability (使用父类方法)
+            icon_widget = self.create_icon_widget(icon_path, ability_name)
             
-            # Store icon widget in dictionary for highlighting
+            # Store icon widget and path in dictionary for highlighting and deletion
             self.icon_widgets[ability_name] = icon_widget
+            self.icon_paths[ability_name] = icon_path
 
             # Create binding button
             binding_button = self.create_binding_button(ability_name)
 
             # Apply configuration if binding exists
             if ability_name in self.config_data:
-                shortcut = self.config_data[ability_name]
-                formatted_shortcut = self.format_shortcut(shortcut)  # 使用新方法格式化
-                binding_button.setText(formatted_shortcut)  # 显示格式化后的文本
+                config_value = self.config_data[ability_name]
+                # 支持新格式 [shortcut, threshold] 和旧格式 shortcut
+                if isinstance(config_value, list) and len(config_value) >= 1:
+                    shortcut = config_value[0]
+                elif isinstance(config_value, str):
+                    shortcut = config_value
+                else:
+                    shortcut = None
+                
+                if shortcut:
+                    formatted_shortcut = self.format_shortcut(shortcut)  # 使用新方法格式化
+                    binding_button.setText(formatted_shortcut)  # 显示格式化后的文本
 
             # Setup the ability layout
             ability_layout = QHBoxLayout()
@@ -1416,135 +1993,11 @@ class Ui_ClassicClassPage(object):
         layout.addWidget(self.create_add_icon_widget("icon_search.svg"), row, col)
 
     def create_add_icon_widget(self, icon='icon_heart.svg'):
-        """Creates a widget with an empty icon placeholder and an 'Add Icon' button."""
+        """Creates a widget with an empty icon placeholder and an 'ADD' button."""
+        # 调用基类方法，使用 "ADD" 作为按钮文本
+        return super().create_add_icon_widget(icon=icon, button_text="ADD")
 
-        # Create an empty icon placeholder
-        icon_label = QLabel()
-        icon_label.setFixedSize(64, 64)
-        icon_label.setScaledContents(True)
-
-        icon_path = Functions.set_svg_icon(icon)
-        try:
-            icon_label.setPixmap(QIcon(icon_path).pixmap(64, 64))
-        except Exception as e:
-            print(f"加载图标错误: {e}")
-            icon_label.setText("No Icon")
-
-        # Set up the layout for the icon placeholder
-        icon_layout = QVBoxLayout()
-        icon_layout.addWidget(icon_label)
-
-        icon_widget = QWidget()
-        icon_widget.setLayout(icon_layout)
-        icon_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        # Create the 'Add Icon' button
-        add_icon_button = self.create_add_icon_button()
-        add_icon_button.setText("Add Icon")
-
-        # Combine the icon and button in a horizontal layout
-        add_icon_layout = QHBoxLayout()
-        add_icon_layout.setAlignment(Qt.AlignLeft)
-        add_icon_layout.setSpacing(5)
-        add_icon_layout.addWidget(icon_widget)
-        add_icon_layout.addWidget(add_icon_button)
-
-        # Wrap the layout in a widget
-        add_icon_ability_widget = QWidget()
-        add_icon_ability_widget.setLayout(add_icon_layout)
-
-        return add_icon_ability_widget
-
-    def show_add_icon_dialog(self):
-        """Displays a modern dialog for adding icons."""
-        # Create modern dialog with main_window as parent
-        dialog = ModernAddIconDialog(parent=self.main_window, themes=self.themes)
-        
-        # Set page instance reference for accessing selected_class_name and selected_talent_name
-        dialog.page_instance = self
-        
-        # Set reload callback
-        dialog.reload_icons = self.reload_icons
-        
-        # Center dialog on main window
-        dialog.move(
-            self.main_window.x() + (self.main_window.width() - 520) // 2,
-            self.main_window.y() + (self.main_window.height() - 460) // 2
-        )
-        
-        # Show dialog
-        dialog.exec()
-
-    def create_add_icon_button(self):
-        """Creates a custom 'Add Icon' button that opens the add icon dialog on click."""
-        # 根据背景颜色自动选择文字颜色
-        bg_color = self.themes["app_color"]["bg_one"]
-        bg_color_hover = self.themes["app_color"]["context_hover"]
-        bg_color_pressed = self.themes["app_color"]["context_pressed"]
-        
-        text_color = self.get_contrast_text_color(bg_color)
-        hover_text_color = self.get_contrast_text_color(bg_color_hover)
-        pressed_text_color = self.get_contrast_text_color(bg_color_pressed)
-        
-        # Create button with custom styling
-        add_icon_button = PyPushButton(
-            text="Add Icon",
-            radius=8,
-            color=text_color,
-            bg_color=bg_color,
-            bg_color_hover=bg_color_hover,
-            bg_color_pressed=bg_color_pressed,
-            font_size=20
-        )
-        
-        # 更新样式以支持不同状态的文字颜色
-        updated_style = f"""
-QPushButton {{
-	border: none;
-    padding-left: 10px;
-    padding-right: 5px;
-    color: {text_color};
-	border-radius: 8px;	
-	background-color: {bg_color};
-	font-size: 20px;
-}}
-QPushButton:hover {{
-	background-color: {bg_color_hover};
-	color: {hover_text_color};
-}}
-QPushButton:pressed {{	
-	background-color: {bg_color_pressed};
-	color: {pressed_text_color};
-}}
-"""
-        add_icon_button.setStyleSheet(updated_style)
-
-        add_icon_button.setFixedHeight(64)
-        add_icon_button.setFixedWidth(80)
-        add_icon_button.setToolTip("Add a new icon")
-
-        # Connect button click to open the dialog
-        add_icon_button.clicked.connect(self.show_add_icon_dialog)
-        print("Add Icon button setup complete.")  # Debug: Confirm setup complete
-
-        return add_icon_button
-
-    def get_contrast_text_color(self, bg_color):
-        """根据背景颜色返回对比度高的文字颜色"""
-        # 将十六进制颜色转换为RGB
-        bg_color = bg_color.lstrip('#')
-        r = int(bg_color[0:2], 16)
-        g = int(bg_color[2:4], 16)
-        b = int(bg_color[4:6], 16)
-        
-        # 计算亮度 (使用相对亮度公式)
-        brightness = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-        
-        # 如果背景较亮，返回深色文字；如果背景较暗，返回浅色文字
-        if brightness > 0.5:
-            return self.themes["app_color"]["text_title"]  # 深色文字
-        else:
-            return self.themes["app_color"]["white"]  # 浅色文字
+    # 添加图标相关方法已从基类继承，无需重复定义
 
     def create_binding_button(self, ability_name):
         """创建用于按键绑定的按钮，并设置样式"""

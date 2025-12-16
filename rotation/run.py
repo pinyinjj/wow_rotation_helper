@@ -16,11 +16,12 @@ class RotationHelper:
         self.user_key_bind_loader = UserKeyBindLoader(keybind_file)
         self.binded_abilities = self.user_key_bind_loader.binded_abilities()
         self.key_mapping = self.user_key_bind_loader.get_skill_key_mapping()
+        self.threshold_mapping = self.user_key_bind_loader.get_skill_threshold_mapping()
 
         self.icon_loader = SkillIconLoader(class_name, talent_name, self.binded_abilities, game_version=self.game_version)
         self.images = self.icon_loader.get_images()
 
-        self.matcher = ImageMatcher(self.images, self.key_mapping, self.rotation_config, self.game_version)
+        self.matcher = ImageMatcher(self.images, self.key_mapping, self.rotation_config, self.game_version, self.threshold_mapping)
 
         # 循环与模式控制：
         # - is_running 为 False 时主循环结束

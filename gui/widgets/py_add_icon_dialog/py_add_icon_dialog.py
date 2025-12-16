@@ -9,9 +9,204 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QWidget, QLabel, 
     QLineEdit, QPushButton, QFrame, QProgressBar, QMessageBox
 )
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QThread, Signal
 from PySide6.QtGui import QFont
 from gui.core.functions import Functions
+from gui.widgets.py_icon_selector_dialog import IconSelectorDialog
+
+
+class DownloadThread(QThread):
+    """下载图标的线程类"""
+    finished = Signal(bool, str, int, int, list, list, dict)
+    progress = Signal(int)
+    
+    def __init__(self, spell_ids, trinket_ids, consumable_ids, class_name, talent_name, game_version):
+        super().__init__()
+        self.spell_ids = spell_ids
+        self.trinket_ids = trinket_ids
+        self.consumable_ids = consumable_ids
+        self.class_name = class_name
+        self.talent_name = talent_name
+        self.game_version = game_version
+        self._is_cancelled = False
+        self._current_progress = 0
+        self.multiple_icons_info = None
+    
+    def cancel(self):
+        """取消下载"""
+        self._is_cancelled = True
+    
+    def _convert_id_to_int(self, item_id):
+        """将ID转换为整数（如果是字符串）"""
+        if isinstance(item_id, str) and item_id.isdigit():
+            return int(item_id)
+        return item_id
+    
+    def _download_single_item(self, item_id, item_type, class_name, talent_name, game_version):
+        """下载单个物品图标"""
+        try:
+            item_id_int = self._convert_id_to_int(item_id)
+            kwargs = {
+                'class_name': class_name,
+                'talent_name': talent_name,
+                'game_version': game_version
+            }
+            kwargs[f'{item_type}_id'] = item_id_int
+            
+            status = Functions.download_icon(**kwargs)
+            self._current_progress += 1
+            self.progress.emit(self._current_progress)
+            return status, item_id_int
+        except Exception as e:
+            self._current_progress += 1
+            self.progress.emit(self._current_progress)
+            print(f"[ERROR] 下载失败 - {item_type} ID: {item_id}, 错误: {e}")
+            item_id_int = self._convert_id_to_int(item_id)
+            return -1, item_id_int
+    
+    def _get_first_id(self, id_list):
+        """获取ID列表的第一个ID并转换为整数（如果可能）"""
+        if not id_list:
+            return None
+        first_id = id_list[0]
+        if isinstance(first_id, str) and first_id.isdigit():
+            return int(first_id)
+        return first_id
+    
+    def _create_failed_ids_detail(self, spell_id, trinket_id, consumable_id):
+        """创建失败ID详情列表"""
+        failed_ids_detail = []
+        if spell_id is not None:
+            failed_ids_detail.append({'type': 'spell', 'id': spell_id})
+        if trinket_id is not None:
+            failed_ids_detail.append({'type': 'trinket', 'id': trinket_id})
+        if consumable_id is not None:
+            failed_ids_detail.append({'type': 'consumable', 'id': consumable_id})
+        return failed_ids_detail
+    
+    def _handle_classic_multiple_types(self):
+        """处理classic模式下多个类型的ID"""
+        spell_id = self._get_first_id(self.spell_ids)
+        trinket_id = self._get_first_id(self.trinket_ids)
+        consumable_id = self._get_first_id(self.consumable_ids)
+        
+        try:
+            result = Functions.download_icon(
+                spell_id=spell_id,
+                trinket_id=trinket_id,
+                consumable_id=consumable_id,
+                class_name=self.class_name,
+                talent_name=self.talent_name,
+                game_version=self.game_version
+            )
+            self._current_progress += 1
+            self.progress.emit(self._current_progress)
+            
+            return self._process_download_result(result, spell_id, trinket_id, consumable_id)
+        except Exception as e:
+            self._current_progress += 1
+            self.progress.emit(self._current_progress)
+            print(f"[ERROR] 下载失败，错误: {e}")
+            failed_ids_detail = self._create_failed_ids_detail(spell_id, trinket_id, consumable_id)
+            return -1, failed_ids_detail
+    
+    def _process_download_result(self, result, spell_id, trinket_id, consumable_id):
+        """处理下载结果"""
+        if isinstance(result, dict) and result.get('multiple_icons'):
+            self.multiple_icons_info = result.get('icons', [])
+            return 0, []  # 需要用户选择
+        
+        if result == 1:
+            return 1, []
+        
+        # 下载失败
+        failed_ids_detail = self._create_failed_ids_detail(spell_id, trinket_id, consumable_id)
+        return -1, failed_ids_detail
+    
+    def _download_items_list(self, item_ids, item_type):
+        """下载物品列表"""
+        success_count = 0
+        failed_ids = []
+        failed_ids_detail = []
+        
+        for item_id in item_ids:
+            if self._is_cancelled:
+                break
+            status, item_id_int = self._download_single_item(
+                item_id, item_type, self.class_name, self.talent_name, self.game_version
+            )
+            if status == 1:
+                success_count += 1
+            else:
+                failed_ids.append(f"{item_type.capitalize()} ID: {item_id}")
+                failed_ids_detail.append({'type': item_type, 'id': item_id_int})
+        
+        return success_count, failed_ids, failed_ids_detail
+    
+    def run(self):
+        """运行下载线程"""
+        print(f"[DEBUG] DownloadThread.run() started")
+        print(f"[DEBUG] Class: {self.class_name}, Talent: {self.talent_name}, Version: {self.game_version}")
+        
+        success_count = 0
+        fail_count = 0
+        failed_ids = []
+        failed_ids_detail = []
+        total = len(self.spell_ids) + len(self.trinket_ids) + len(self.consumable_ids)
+        print(f"[DEBUG] Total items to download: {total}")
+        
+        is_classic = self.game_version.lower() == "classic"
+        has_multiple_types = sum([
+            len(self.spell_ids) > 0,
+            len(self.trinket_ids) > 0,
+            len(self.consumable_ids) > 0
+        ]) > 1
+        
+        if is_classic and has_multiple_types:
+            status, detail = self._handle_classic_multiple_types()
+            if status == 1:
+                success_count += 1
+            elif status == -1:
+                fail_count += 1
+                failed_ids_detail.extend(detail)
+                for item in detail:
+                    failed_ids.append(f"{item['type'].capitalize()} ID: {item['id']}")
+        else:
+            # 下载spells
+            if self.spell_ids:
+                sc, fi, fid = self._download_items_list(self.spell_ids, 'spell')
+                success_count += sc
+                failed_ids.extend(fi)
+                failed_ids_detail.extend(fid)
+            
+            # 下载trinkets
+            if self.trinket_ids:
+                sc, fi, fid = self._download_items_list(self.trinket_ids, 'trinket')
+                success_count += sc
+                failed_ids.extend(fi)
+                failed_ids_detail.extend(fid)
+            
+            # 下载consumables
+            if self.consumable_ids:
+                sc, fi, fid = self._download_items_list(self.consumable_ids, 'consumable')
+                success_count += sc
+                failed_ids.extend(fi)
+                failed_ids_detail.extend(fid)
+            
+            fail_count = len(failed_ids)
+        
+        # 发送结果
+        multiple_icons_dict = {'icons': self.multiple_icons_info} if self.multiple_icons_info else {}
+        
+        if success_count > 0:
+            message = f"Successfully downloaded {success_count} icon(s)" + (f", {fail_count} failed" if failed_ids else "")
+        else:
+            message = f"Failed to download {fail_count} icon(s)"
+        
+        self.finished.emit(
+            success_count > 0, message, success_count, fail_count,
+            failed_ids, failed_ids_detail, multiple_icons_dict
+        )
 
 
 class ModernAddIconDialog(QDialog):
@@ -411,9 +606,195 @@ class ModernAddIconDialog(QDialog):
         ids = [id.strip() for id in id_string.split(',') if id.strip()]
         return ids
     
+    def _get_page_info(self):
+        """从page_instance获取类名、天赋名和游戏版本"""
+        if not hasattr(self, 'page_instance'):
+            return '', '', 'retail'
+        
+        page = self.page_instance
+        class_name = getattr(page, 'selected_class_name', '')
+        talent_name = getattr(page, 'selected_talent_name', '')
+        
+        if hasattr(page, 'get_game_version'):
+            game_version = page.get_game_version()
+        elif 'classic' in str(type(page).__name__).lower():
+            game_version = 'classic'
+        else:
+            game_version = 'retail'
+        
+        return class_name, talent_name, game_version
+    
+    def _prepare_download_ui(self, total_count):
+        """准备下载UI（禁用按钮、显示进度等）"""
+        self.download_btn.setEnabled(False)
+        self.cancel_btn.setText("Cancel")
+        self.download_base_text = f"Downloading {total_count} icon(s)"
+        self.download_dots_index = 0
+        self.show_status(f"{self.download_base_text}{self.download_dots_pattern[0]}", "info")
+        self.download_dots_timer.start(500)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, total_count)
+        self.progress_bar.setValue(0)
+        self.setFixedSize(520, self.progress_height)
+    
+    def _handle_multiple_icons_selection(self, icon_options):
+        """处理多个图标选择"""
+        selector_dialog = IconSelectorDialog(
+            parent=self,
+            themes=self.themes,
+            icon_options=icon_options
+        )
+        
+        parent_rect = self.geometry()
+        dialog_rect = selector_dialog.geometry()
+        x = parent_rect.x() + (parent_rect.width() - dialog_rect.width()) // 2
+        y = parent_rect.y() + (parent_rect.height() - dialog_rect.height()) // 2
+        selector_dialog.move(x, y)
+        
+        if selector_dialog.exec() == QDialog.Accepted:
+            selected_icon = selector_dialog.selected_icon
+            if selected_icon:
+                self._download_selected_icon(selected_icon)
+            else:
+                self._handle_selection_cancelled()
+        else:
+            self._handle_selection_cancelled()
+    
+    def _download_selected_icon(self, selected_icon):
+        """下载选中的图标"""
+        try:
+            download_status = Functions.download_and_save_icon(
+                icon_url=selected_icon['icon_url'],
+                item_name=selected_icon['item_name'],
+                item_id=selected_icon['id'],
+                class_name=self._saved_class_name,
+                talent_name=self._saved_talent_name,
+                game_version=self._saved_game_version
+            )
+            
+            if download_status == 1:
+                self.show_status(f"成功下载图标: {selected_icon.get('item_name', 'Unknown')}", "success")
+                from PySide6.QtCore import QTimer
+                def close_and_reload():
+                    self.accept()
+                    if hasattr(self, 'reload_icons') and callable(self.reload_icons):
+                        self.reload_icons()
+                QTimer.singleShot(1500, close_and_reload)
+            else:
+                self.show_status(f"下载图标失败: {selected_icon.get('item_name', 'Unknown')}", "error")
+                self.download_btn.setEnabled(True)
+                self.cancel_btn.setText("Close")
+        except Exception as e:
+            print(f"[ERROR] Failed to download selected icon: {e}")
+            self.show_status(f"下载图标时发生错误: {str(e)}", "error")
+            self.download_btn.setEnabled(True)
+            self.cancel_btn.setText("Close")
+    
+    def _handle_selection_cancelled(self):
+        """处理用户取消选择"""
+        self.show_status("用户取消了图标选择", "info")
+        self.download_btn.setEnabled(True)
+        self.cancel_btn.setText("Close")
+    
+    def _handle_failed_downloads(self, failed_ids, failed_ids_detail):
+        """处理下载失败的情况"""
+        is_multiple_icons_error = any("多个链接找到图标" in failed_id for failed_id in failed_ids)
+        
+        if is_multiple_icons_error:
+            error_message = "错误：多个链接找到图标\n\n请只输入一个类型的ID（Spell ID、Trinket ID 或 Consumable ID 中的一种）"
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setWindowTitle("多个链接找到图标")
+            msg_box.setText(error_message)
+            msg_box.addButton("确定", QMessageBox.AcceptRole)
+            msg_box.exec()
+            self.download_btn.setEnabled(True)
+            self.cancel_btn.setText("Close")
+            return False
+        
+        failed_list = "\n".join([f"  • {failed_id}" for failed_id in failed_ids])
+        error_message = f"以下图标下载失败，未找到对应的图标：\n\n{failed_list}"
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setWindowTitle("图标下载失败")
+        msg_box.setText(error_message)
+        
+        retry_btn = msg_box.addButton("重新下载", QMessageBox.ActionRole)
+        msg_box.addButton("确定", QMessageBox.AcceptRole)
+        msg_box.exec()
+        
+        if msg_box.clickedButton() == retry_btn:
+            self.retry_download_failed_icons(failed_ids_detail)
+            return False
+        
+        return True
+    
+    def _adjust_window_for_failed_ids(self, failed_ids):
+        """根据失败的ID数量调整窗口高度"""
+        if not failed_ids:
+            return
+        estimated_lines = 3 + len(failed_ids)
+        additional_height = max(0, (estimated_lines - 3) * 20)
+        new_height = min(self.progress_height + additional_height, 600)
+        self.setFixedSize(520, new_height)
+    
+    def _handle_successful_download(self, message, failed_ids):
+        """处理成功下载的情况"""
+        if failed_ids:
+            failed_list = "\n".join([f"  • {failed_id}" for failed_id in failed_ids])
+            full_message = f"{message}\n\nFailed Icon IDs:\n{failed_list}"
+            self.show_status(full_message, "success")
+            self._adjust_window_for_failed_ids(failed_ids)
+        else:
+            self.show_status(message, "success")
+        
+        from PySide6.QtCore import QTimer
+        delay = 3000 if failed_ids else 1500
+        def close_and_reload():
+            self.accept()
+            if hasattr(self, 'reload_icons') and callable(self.reload_icons):
+                self.reload_icons()
+        QTimer.singleShot(delay, close_and_reload)
+    
+    def _handle_failed_download(self, message, failed_ids):
+        """处理完全失败的情况"""
+        if failed_ids:
+            failed_list = "\n".join([f"  • {failed_id}" for failed_id in failed_ids])
+            full_message = f"{message}\n\nFailed Icon IDs:\n{failed_list}"
+            self.show_status(full_message, "error")
+            self._adjust_window_for_failed_ids(failed_ids)
+        else:
+            self.show_status(message, "error")
+        self.download_btn.setEnabled(True)
+        self.cancel_btn.setText("Close")
+    
+    def _on_download_finished(self, success, message, success_count, fail_count, failed_ids, failed_ids_detail, multiple_icons_info):
+        """处理下载完成的回调"""
+        self.download_dots_timer.stop()
+        self.progress_bar.setVisible(False)
+        
+        # 处理多个图标选择
+        if multiple_icons_info and multiple_icons_info.get('icons'):
+            icon_options = multiple_icons_info.get('icons', [])
+            print(f"[DEBUG] Showing icon selector dialog with {len(icon_options)} options")
+            self._handle_multiple_icons_selection(icon_options)
+            return
+        
+        # 处理失败的下载
+        if failed_ids:
+            if not self._handle_failed_downloads(failed_ids, failed_ids_detail):
+                return
+        
+        # 处理成功或失败的结果
+        if success:
+            self._handle_successful_download(message, failed_ids)
+        else:
+            self._handle_failed_download(message, failed_ids)
+    
     def start_download(self):
         """Start the download process"""
         print("[DEBUG] start_download called")
+        
         # Parse inputs
         spell_ids = self.parse_ids(self.spell_input.text().strip())
         trinket_ids = self.parse_ids(self.trinket_input.text().strip())
@@ -427,259 +808,28 @@ class ModernAddIconDialog(QDialog):
             self.show_status("Please enter at least one ID", "error")
             return
         
-        # Disable buttons and show status
-        self.download_btn.setEnabled(False)
-        self.cancel_btn.setText("Cancel")
+        # Prepare UI
         total_count = len(spell_ids) + len(trinket_ids) + len(consumable_ids)
-        self.download_base_text = f"Downloading {total_count} icon(s)"
-        self.download_dots_index = 0
-        self.show_status(f"{self.download_base_text}{self.download_dots_pattern[0]}", "info")
-        # Start dots animation timer (update every 500ms)
-        self.download_dots_timer.start(500)
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, total_count)
-        self.progress_bar.setValue(0)
-        # Increase window height to accommodate progress bar
-        self.setFixedSize(520, self.progress_height)
+        self._prepare_download_ui(total_count)
         
-        # Import here to avoid circular imports
-        from PySide6.QtCore import QThread, Signal
-        
-        # Create download thread
-        class DownloadThread(QThread):
-            finished = Signal(bool, str, int, int, list, list)  # success, message, success_count, fail_count, failed_ids, failed_ids_detail
-            progress = Signal(int)  # current progress
-            
-            def __init__(self, spell_ids, trinket_ids, consumable_ids, class_name, talent_name, game_version):
-                super().__init__()
-                self.spell_ids = spell_ids
-                self.trinket_ids = trinket_ids
-                self.consumable_ids = consumable_ids
-                self.class_name = class_name
-                self.talent_name = talent_name
-                self.game_version = game_version
-                self._is_cancelled = False
-                self._current_progress = 0
-            
-            def run(self):
-                print(f"[DEBUG] DownloadThread.run() started")
-                print(f"[DEBUG] Class: {self.class_name}, Talent: {self.talent_name}, Version: {self.game_version}")
-                success_count = 0
-                fail_count = 0
-                failed_ids = []  # Track failed IDs for display
-                failed_ids_detail = []  # Track failed IDs with detail info: {'type': 'spell', 'id': id}
-                total = len(self.spell_ids) + len(self.trinket_ids) + len(self.consumable_ids)
-                print(f"[DEBUG] Total items to download: {total}")
-                
-                # Download spells
-                for spell_id in self.spell_ids:
-                    print(f"[DEBUG] Downloading spell: {spell_id}")
-                    if self._is_cancelled:
-                        break
-                    try:
-                        print(f"[DEBUG] Calling Functions.download_icon for spell {spell_id}")
-                        # Convert ID to int if it's a string
-                        spell_id_int = int(spell_id) if isinstance(spell_id, str) and spell_id.isdigit() else spell_id
-                        status = Functions.download_icon(
-                            spell_id=spell_id_int,
-                            class_name=self.class_name,
-                            talent_name=self.talent_name,
-                            game_version=self.game_version
-                        )
-                        print(f"[DEBUG] download_icon returned status: {status}")
-                        self._current_progress += 1
-                        self.progress.emit(self._current_progress)
-                        if status == 1:
-                            success_count += 1
-                        else:
-                            fail_count += 1
-                            failed_ids.append(f"Spell ID: {spell_id}")
-                            failed_ids_detail.append({'type': 'spell', 'id': spell_id_int})
-                            print(f"[ERROR] 下载失败 - Spell ID: {spell_id}")
-                    except Exception as e:
-                        fail_count += 1
-                        failed_ids.append(f"Spell ID: {spell_id}")
-                        spell_id_int = int(spell_id) if isinstance(spell_id, str) and spell_id.isdigit() else spell_id
-                        failed_ids_detail.append({'type': 'spell', 'id': spell_id_int})
-                        print(f"[ERROR] 下载失败 - Spell ID: {spell_id}, 错误: {e}")
-                        self._current_progress += 1
-                        self.progress.emit(self._current_progress)
-                
-                # Download trinkets
-                for trinket_id in self.trinket_ids:
-                    print(f"[DEBUG] Downloading trinket: {trinket_id}")
-                    if self._is_cancelled:
-                        break
-                    try:
-                        print(f"[DEBUG] Calling Functions.download_icon for trinket {trinket_id}")
-                        # Convert ID to int if it's a string
-                        trinket_id_int = int(trinket_id) if isinstance(trinket_id, str) and trinket_id.isdigit() else trinket_id
-                        status = Functions.download_icon(
-                            trinket_id=trinket_id_int,
-                            class_name=self.class_name,
-                            talent_name=self.talent_name,
-                            game_version=self.game_version
-                        )
-                        print(f"[DEBUG] download_icon returned status: {status}")
-                        self._current_progress += 1
-                        self.progress.emit(self._current_progress)
-                        if status == 1:
-                            success_count += 1
-                        else:
-                            fail_count += 1
-                            failed_ids.append(f"Trinket ID: {trinket_id}")
-                            failed_ids_detail.append({'type': 'trinket', 'id': trinket_id_int})
-                            print(f"[ERROR] 下载失败 - Trinket ID: {trinket_id}")
-                    except Exception as e:
-                        fail_count += 1
-                        failed_ids.append(f"Trinket ID: {trinket_id}")
-                        trinket_id_int = int(trinket_id) if isinstance(trinket_id, str) and trinket_id.isdigit() else trinket_id
-                        failed_ids_detail.append({'type': 'trinket', 'id': trinket_id_int})
-                        print(f"[ERROR] 下载失败 - Trinket ID: {trinket_id}, 错误: {e}")
-                        self._current_progress += 1
-                        self.progress.emit(self._current_progress)
-                
-                # Download consumables
-                for consumable_id in self.consumable_ids:
-                    print(f"[DEBUG] Downloading consumable: {consumable_id}")
-                    if self._is_cancelled:
-                        break
-                    try:
-                        print(f"[DEBUG] Calling Functions.download_icon for consumable {consumable_id}")
-                        # Convert ID to int if it's a string
-                        consumable_id_int = int(consumable_id) if isinstance(consumable_id, str) and consumable_id.isdigit() else consumable_id
-                        status = Functions.download_icon(
-                            consumable_id=consumable_id_int,
-                            class_name=self.class_name,
-                            talent_name=self.talent_name,
-                            game_version=self.game_version
-                        )
-                        print(f"[DEBUG] download_icon returned status: {status}")
-                        self._current_progress += 1
-                        self.progress.emit(self._current_progress)
-                        if status == 1:
-                            success_count += 1
-                        else:
-                            fail_count += 1
-                            failed_ids.append(f"Consumable ID: {consumable_id}")
-                            failed_ids_detail.append({'type': 'consumable', 'id': consumable_id_int})
-                            print(f"[ERROR] 下载失败 - Consumable ID: {consumable_id}")
-                    except Exception as e:
-                        fail_count += 1
-                        failed_ids.append(f"Consumable ID: {consumable_id}")
-                        consumable_id_int = int(consumable_id) if isinstance(consumable_id, str) and consumable_id.isdigit() else consumable_id
-                        failed_ids_detail.append({'type': 'consumable', 'id': consumable_id_int})
-                        print(f"[ERROR] 下载失败 - Consumable ID: {consumable_id}, 错误: {e}")
-                        self._current_progress += 1
-                        self.progress.emit(self._current_progress)
-                
-                # Emit result with failed IDs
-                if success_count > 0:
-                    if failed_ids:
-                        message = f"Successfully downloaded {success_count} icon(s), {fail_count} failed"
-                    else:
-                        message = f"Successfully downloaded {success_count} icon(s)"
-                    self.finished.emit(True, message, success_count, fail_count, failed_ids, failed_ids_detail)
-                else:
-                    message = f"Failed to download {fail_count} icon(s)"
-                    self.finished.emit(False, message, success_count, fail_count, failed_ids, failed_ids_detail)
-            
-            def cancel(self):
-                self._is_cancelled = True
-        
-        # Get class and talent names from page_instance (set by the page)
-        if hasattr(self, 'page_instance'):
-            page = self.page_instance
-            class_name = getattr(page, 'selected_class_name', '')
-            talent_name = getattr(page, 'selected_talent_name', '')
-            # Determine game version based on page class name
-            if 'classic' in str(type(page).__name__).lower():
-                game_version = 'classic'
-            else:
-                game_version = 'retail'
-            print(f"[DEBUG] Got from page_instance - Class: {class_name}, Talent: {talent_name}, Version: {game_version}")
-        else:
-            # Fallback if page_instance not set
-            class_name = ''
-            talent_name = ''
-            game_version = 'retail'
-            print("[DEBUG] page_instance not found, using defaults")
-        
+        # Get page info
+        class_name, talent_name, game_version = self._get_page_info()
         print(f"[DEBUG] Creating DownloadThread with - Class: {class_name}, Talent: {talent_name}, Version: {game_version}")
+        
+        # Save for callbacks
+        self._saved_class_name = class_name
+        self._saved_talent_name = talent_name
+        self._saved_game_version = game_version
+        
+        # Create and start thread
         self.download_thread = DownloadThread(
             spell_ids, trinket_ids, consumable_ids,
             class_name, talent_name, game_version
         )
         
-        def on_progress(value):
-            self.progress_bar.setValue(value)
+        self.download_thread.progress.connect(lambda value: self.progress_bar.setValue(value))
+        self.download_thread.finished.connect(self._on_download_finished)
         
-        def on_finished(success, message, success_count, fail_count, failed_ids, failed_ids_detail):
-            # Stop dots animation
-            self.download_dots_timer.stop()
-            self.progress_bar.setVisible(False)
-            
-            # 如果有失败的ID，弹窗显示并提供重新下载选项
-            if failed_ids:
-                failed_list = "\n".join([f"  • {failed_id}" for failed_id in failed_ids])
-                error_message = f"以下图标下载失败，未找到对应的图标：\n\n{failed_list}"
-                msg_box = QMessageBox(self)
-                msg_box.setIcon(QMessageBox.Warning)
-                msg_box.setWindowTitle("图标下载失败")
-                msg_box.setText(error_message)
-                
-                # 添加重新下载按钮
-                retry_btn = msg_box.addButton("重新下载", QMessageBox.ActionRole)
-                ok_btn = msg_box.addButton("确定", QMessageBox.AcceptRole)
-                
-                result = msg_box.exec()
-                
-                # 如果用户点击了重新下载按钮
-                if msg_box.clickedButton() == retry_btn:
-                    # 重新下载失败的图标
-                    self.retry_download_failed_icons(failed_ids_detail)
-                    return
-            
-            if success:
-                # Build message with failed IDs if any
-                if failed_ids:
-                    failed_list = "\n".join([f"  • {failed_id}" for failed_id in failed_ids])
-                    full_message = f"{message}\n\nFailed Icon IDs:\n{failed_list}"
-                    self.show_status(full_message, "success")
-                    # Adjust window height for failed IDs list
-                    estimated_lines = 3 + len(failed_ids)  # Base message + failed IDs
-                    additional_height = max(0, (estimated_lines - 3) * 20)
-                    new_height = min(self.progress_height + additional_height, 600)  # Max 600px
-                    self.setFixedSize(520, new_height)
-                else:
-                    self.show_status(message, "success")
-                # Auto close after 1.5 seconds (or longer if there are failures)
-                from PySide6.QtCore import QTimer
-                delay = 3000 if failed_ids else 1500  # Longer delay if there are failures
-                def close_and_reload():
-                    self.accept()
-                    if hasattr(self, 'reload_icons') and callable(self.reload_icons):
-                        self.reload_icons()
-                QTimer.singleShot(delay, close_and_reload)
-            else:
-                # Build message with failed IDs
-                if failed_ids:
-                    failed_list = "\n".join([f"  • {failed_id}" for failed_id in failed_ids])
-                    full_message = f"{message}\n\nFailed Icon IDs:\n{failed_list}"
-                    self.show_status(full_message, "error")
-                    # Adjust window height for failed IDs list
-                    estimated_lines = 3 + len(failed_ids)  # Base message + failed IDs
-                    additional_height = max(0, (estimated_lines - 3) * 20)
-                    new_height = min(self.progress_height + additional_height, 600)  # Max 600px
-                    self.setFixedSize(520, new_height)
-                else:
-                    self.show_status(message, "error")
-                self.download_btn.setEnabled(True)
-                self.cancel_btn.setText("Close")
-                # Keep window at progress height if showing error, user can close manually
-        
-        self.download_thread.progress.connect(on_progress)
-        self.download_thread.finished.connect(on_finished)
         print("[DEBUG] Starting download thread")
         self.download_thread.start()
     
