@@ -68,5 +68,15 @@ class UserKeyBindLoader:
         if self.skill_key_mapping:
             return list(self.skill_key_mapping.keys())
         return []
+    
+    def get_zoom_from_config(self):
+        """从配置文件中获取zoom值（如果存在）"""
+        if self.config_data and "zoom" in self.config_data:
+            try:
+                zoom_val = float(self.config_data["zoom"])
+                return max(0.1, min(5.0, zoom_val))  # 限制在合理范围内
+            except (ValueError, TypeError):
+                return None
+        return None
 
 

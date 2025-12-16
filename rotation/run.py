@@ -17,6 +17,13 @@ class RotationHelper:
         self.binded_abilities = self.user_key_bind_loader.binded_abilities()
         self.key_mapping = self.user_key_bind_loader.get_skill_key_mapping()
         self.threshold_mapping = self.user_key_bind_loader.get_skill_threshold_mapping()
+        
+        # 从配置JSON文件中读取zoom值（与preview模式保持一致）
+        # 如果配置JSON中有zoom字段，优先使用它；否则使用rotation_config.yaml中的zoom
+        config_json_zoom = self.user_key_bind_loader.get_zoom_from_config()
+        if config_json_zoom is not None:
+            self.rotation_config['zoom'] = config_json_zoom
+            print(f"[RotationHelper] 从配置JSON中读取zoom: {config_json_zoom}", flush=True)
 
         self.icon_loader = SkillIconLoader(class_name, talent_name, self.binded_abilities, game_version=self.game_version)
         self.images = self.icon_loader.get_images()
@@ -69,6 +76,7 @@ class RotationHelper:
                 if self.mode == "run" and keyboard.is_pressed(self.rotation_config['pressed_start']):
                     # 运行模式 + 热键按下：允许 ImageMatcher 执行按键逻辑
                     self.matcher.enable_keys = True
+                    print(f"[Key Detection] Hotkey '{self.rotation_config['pressed_start']}' is pressed", flush=True)
                 else:
                     # 预览模式或未按热键：禁用按键，仅用于匹配/预览
                     self.matcher.enable_keys = False

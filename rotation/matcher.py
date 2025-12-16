@@ -58,6 +58,8 @@ class ImageMatcher:
         }
         # 预构建模板彩色缓存，匹配方式参考 example/main.py 的模板缓存思路
         self.template_cache = self._build_template_cache()
+        print(f"[Matcher Init] 加载的模板数量: {len(self.icon_templates)}, 模板名称: {list(self.icon_templates.keys())}", flush=True)
+        print(f"[Matcher Init] 按键映射数量: {len(self.key_mapping)}, 按键映射: {self.key_mapping}", flush=True)
         # 是否允许在匹配成功时执行按键输入（由 RotationHelper 控制）
         self.enable_keys = True
 
@@ -169,23 +171,24 @@ class ImageMatcher:
     def take_screenshot(self):
         """
         截取屏幕的指定区域，并将图像从 RGB 转换为 BGR。
+        与 preview 模式的截图方式完全一致：不检查窗口标题，直接截图。
         """
-        active_window = gw.getActiveWindow()
-        if active_window and "魔兽世界" in active_window.title:
-            try:
-                screenshot = ImageGrab.grab(bbox=self.region)
-                screenshot_np = np.array(screenshot)  # 这是 RGB 格式的图像 (HDR 显示下可能偏亮)
-                # 将图像从 RGB 转换为 BGR
-                screenshot_bgr = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
-
-                # 针对 HDR 做一次亮度压缩，避免画面过亮影响匹配
-                screenshot_bgr = self._apply_hdr_correction(screenshot_bgr)
-                return screenshot_bgr  # 返回 BGR 格式的图像
-            except Exception as e:
-                print(f"Failed to take screenshot: {e}", flush=True)
+        try:
+            # 直接截图，不检查窗口标题（与 preview_current_region 保持一致）
+            screenshot = ImageGrab.grab(bbox=self.region)
+            if screenshot is None:
                 return None
-        else:
-            time.sleep(1)
+            screenshot_np = np.array(screenshot)  # 这是 RGB 格式的图像 (HDR 显示下可能偏亮)
+            if screenshot_np.size == 0:
+                return None
+            # 将图像从 RGB 转换为 BGR
+            screenshot_bgr = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+
+            # 针对 HDR 做一次亮度压缩，避免画面过亮影响匹配
+            screenshot_bgr = self._apply_hdr_correction(screenshot_bgr)
+            return screenshot_bgr  # 返回 BGR 格式的图像
+        except Exception as e:
+            print(f"Failed to take screenshot: {e}", flush=True)
             return None
 
     def show_comparison(self, screenshot_color, template_color, template_name, match_value, top_left):
@@ -238,6 +241,7 @@ class ImageMatcher:
         - match_result: 一个元组 (best_match, best_match_value)
         """
         active_window = gw.getActiveWindow()
+        
         if active_window and "魔兽世界" in active_window.title:
             if match_result is not None:
                 best_match, score = match_result
@@ -253,12 +257,14 @@ class ImageMatcher:
                     if self.threshold_mapping and best_match in self.threshold_mapping:
                         effective_threshold = self.threshold_mapping[best_match]
 
-                # 达到对应阈值才执行后续逻辑，否则只打印调试信息
+                # 达到对应阈值才执行后续逻辑
                 if score > effective_threshold:
                     if isinstance(best_match, str):
                         if best_match in self.key_mapping:
+                            shortcut = self.key_mapping.get(best_match, '未知按键')
                             if self.enable_keys:
                                 # 运行模式：真正执行按键
+                                print(f"[Match Result] 按下 {shortcut} ({best_match})", flush=True)
                                 self.process_skill_action(best_match, score)
                             else:
                                 # 预览模式：只通知 GUI 高亮，不执行按键
@@ -266,15 +272,6 @@ class ImageMatcher:
                                     self.last_match = best_match
                                     if self.match_callback:
                                         self.match_callback(best_match)
-                        else:
-                            print(f"[DEBUG] 按键映射中未找到键 '{best_match}'，不执行按键。", flush=True)
-                    else:
-                        print("[DEBUG] 最佳匹配不是字符串，跳过输入。", flush=True)
-                else:
-                    # 得分未达到阈值，不执行按键（已禁用调试输出）
-                    pass
-            else:
-                print("[DEBUG] 未找到匹配项。", flush=True)
 
 
     def process_skill_action(self, best_match, score):
@@ -361,9 +358,18 @@ class ImageMatcher:
             return None, None, -1.0
 
         # 使用公共匹配逻辑（与预览共用），模板来源于 icon_templates
+        normalized_templates = self._normalize_templates_to_bgr()
+        if len(normalized_templates) == 0:
+            return None, None, -1.0
+        
         best_name, best_img_info, best_score = self.match_best_icon_with_scale(
-            frame_bgr, self._normalize_templates_to_bgr(), self.zoom
+            frame_bgr, normalized_templates, self.zoom
         )
+        
+        # 处理 match_best_icon_with_scale 可能返回 None, None, None 的情况
+        if best_name is None and best_img_info is None and best_score is None:
+            return None, None, -1.0
+        
         # 返回名称、模板信息与得分
         return best_name, best_img_info, best_score
 
@@ -398,6 +404,9 @@ class ImageMatcher:
         主图像匹配流程。
         """
         screenshot = self.take_screenshot()
+        if screenshot is None:
+            return
+        
         try:
             # 使用新的彩色匹配逻辑，而不是旧的缩放匹配
             best_name, best_img_info, best_score = self._match_templates_on_frame(screenshot)
@@ -411,6 +420,8 @@ class ImageMatcher:
 
             # 再执行按键处理逻辑（只关心名称和得分）
             match_result = (best_name, best_score)
+            if best_name is not None:
+                print(f"[Match Debug] 匹配到技能: {best_name}, 得分: {best_score:.3f}, enable_keys: {self.enable_keys}", flush=True)
             self.handler_result(match_result)
         except Exception as e:
             print(f"匹配过程中出错: {e}", flush=True)

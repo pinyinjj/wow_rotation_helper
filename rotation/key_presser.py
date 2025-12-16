@@ -32,6 +32,7 @@ class KeyPresser:
         """
         try:
             key = str(key)
+            print(f"[Key Press] Pressing key: {key}", flush=True)
             pyautogui.press(key)
             time.sleep(self.delay)
             self.set_random_delay()
